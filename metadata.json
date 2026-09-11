@@ -1,0 +1,6 @@
+{
+  "name": "OneSpace",
+  "description": "对话式人工智能卫星管控模型平台 - 智能对话交互与实时数据可视化",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
