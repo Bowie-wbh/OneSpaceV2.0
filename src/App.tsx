@@ -65,13 +65,39 @@ const decideTaskOutcome = (totalSteps: number): { outcome: 'success' | 'failure'
   };
 };
 
-// 一轨成像入境建链状态机参数：入境瞬间开始建链，建链后成功可发指令 60s，失败则不可点
+// 一轨成像入境建链状态机参数：入境瞬间开始建链 → 建链结果 → 星上模型启动结果 → 可发指令 60s 窗口（失败则不可点）
 const LINK_CONNECTING_SECONDS = 5;
+const LINK_SUCCESS_MSG_SECONDS = 2;
+const START_MSG_SECONDS = 2;
 const LINK_COMMAND_WINDOW_SECONDS = 60;
 const LINK_SUCCESS_PROBABILITY = 0.75;
+const START_SUCCESS_PROBABILITY = 0.85;
+
+// 星下点预测实时漂移参数：经度沿地面轨迹匀速漂移，纬度按正弦规律在基准点附近周期性摆动
+const SUB_SATELLITE_LNG_SPEED_PER_SEC = 0.045;
+const SUB_SATELLITE_LAT_AMPLITUDE = 8;
+const SUB_SATELLITE_LAT_PERIOD_SECONDS = 240;
+
+// 每秒推进星下点预测经纬度（相对基准点漂移，保持 6 位小数精度实时变化）
+const advanceSubSatellitePoint = (sat: Satellite): Satellite => {
+  if (!sat.subSatelliteBase) return sat;
+  const trackSeconds = (sat.subSatelliteTrackSeconds ?? 0) + 1;
+  let nextLng = sat.subSatelliteBase.lng + SUB_SATELLITE_LNG_SPEED_PER_SEC * trackSeconds;
+  nextLng = ((nextLng + 180) % 360 + 360) % 360 - 180;
+  const nextLat = sat.subSatelliteBase.lat + Math.sin(trackSeconds / SUB_SATELLITE_LAT_PERIOD_SECONDS) * SUB_SATELLITE_LAT_AMPLITUDE;
+  return {
+    ...sat,
+    subSatelliteTrackSeconds: trackSeconds,
+    subSatellitePoint: sat.subSatellitePoint
+      ? { ...sat.subSatellitePoint, lng: Number(nextLng.toFixed(6)), lat: Number(nextLat.toFixed(6)) }
+      : sat.subSatellitePoint,
+  };
+};
 
 // 每秒推进单颗卫星的出入境倒计时与建链状态机
-const tickSatellite = (sat: Satellite): Satellite => {
+const tickSatellite = (sat: Satellite): Satellite => advanceSubSatellitePoint(tickSatelliteState(sat));
+
+const tickSatelliteState = (sat: Satellite): Satellite => {
   if (sat.countdownSeconds <= 1) {
     const nextStatus = sat.status === 'in-bound' ? 'upcoming' : 'in-bound';
     const enteringInbound = nextStatus === 'in-bound';
@@ -99,14 +125,12 @@ const tickSatellite = (sat: Satellite): Satellite => {
     const remaining = (sat.linkStateSeconds ?? LINK_CONNECTING_SECONDS) - 1;
     if (remaining <= 0) {
       const success = Math.random() < LINK_SUCCESS_PROBABILITY;
-      // 60S 指令窗口需扣除本次建链已耗费的时间，剩余才是可发指令的时长
-      const commandWindowRemaining = Math.max(0, LINK_COMMAND_WINDOW_SECONDS - inboundElapsedSeconds);
       return {
         ...sat,
         countdownSeconds: sat.countdownSeconds - 1,
         inboundElapsedSeconds,
-        linkState: success ? 'success' : 'failed',
-        linkStateSeconds: success ? commandWindowRemaining : 0,
+        linkState: success ? 'link-success' : 'link-failed',
+        linkStateSeconds: success ? LINK_SUCCESS_MSG_SECONDS : 0,
       };
     }
     return {
@@ -117,13 +141,54 @@ const tickSatellite = (sat: Satellite): Satellite => {
     };
   }
 
-  if (sat.linkState === 'success') {
+  if (sat.linkState === 'link-success') {
+    const remaining = (sat.linkStateSeconds ?? LINK_SUCCESS_MSG_SECONDS) - 1;
+    if (remaining <= 0) {
+      const started = Math.random() < START_SUCCESS_PROBABILITY;
+      return {
+        ...sat,
+        countdownSeconds: sat.countdownSeconds - 1,
+        inboundElapsedSeconds,
+        linkState: started ? 'start-success' : 'start-failed',
+        linkStateSeconds: started ? START_MSG_SECONDS : 0,
+      };
+    }
+    return {
+      ...sat,
+      countdownSeconds: sat.countdownSeconds - 1,
+      inboundElapsedSeconds,
+      linkStateSeconds: remaining,
+    };
+  }
+
+  if (sat.linkState === 'start-success') {
+    const remaining = (sat.linkStateSeconds ?? START_MSG_SECONDS) - 1;
+    if (remaining <= 0) {
+      // 60S 指令窗口需扣除建链与启动已耗费的时间，剩余才是可发指令的时长
+      const commandWindowRemaining = Math.max(0, LINK_COMMAND_WINDOW_SECONDS - inboundElapsedSeconds);
+      return {
+        ...sat,
+        countdownSeconds: sat.countdownSeconds - 1,
+        inboundElapsedSeconds,
+        linkState: 'sendable',
+        linkStateSeconds: commandWindowRemaining,
+      };
+    }
+    return {
+      ...sat,
+      countdownSeconds: sat.countdownSeconds - 1,
+      inboundElapsedSeconds,
+      linkStateSeconds: remaining,
+    };
+  }
+
+  if (sat.linkState === 'sendable') {
     const remaining = Math.max(0, (sat.linkStateSeconds ?? 0) - 1);
     return {
       ...sat,
       countdownSeconds: sat.countdownSeconds - 1,
       inboundElapsedSeconds,
-      linkState: remaining <= 0 ? 'expired' : 'success',
+      linkState: remaining <= 0 ? 'window-closed' : 'sendable',
       linkStateSeconds: remaining,
     };
   }
@@ -1881,7 +1946,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
   // （1）只有卫星入境时的前一分钟才能点击，超时不可点击（ToolCards 中已做入境前 1 分钟校验）
   // （2）点击后仅预填指令文案，实际卫星数量判定与分支在用户发送指令后进行
   const handleSelectSingleOrbit = () => {
-    const eligibleSatellites = satellites.filter(s => s.status === 'in-bound' && s.linkState === 'success');
+    const eligibleSatellites = satellites.filter(s => s.status === 'in-bound' && s.linkState === 'sendable');
 
     if (eligibleSatellites.length === 0) {
       return;
@@ -1942,7 +2007,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
   const handleSingleOrbitFlow = (userText: string) => {
     setWorkspaceKanbanFilter('task');
 
-    const eligibleSatellites = satellites.filter(s => s.status === 'in-bound' && s.linkState === 'success');
+    const eligibleSatellites = satellites.filter(s => s.status === 'in-bound' && s.linkState === 'sendable');
 
     const userMsgId = 'msg-' + Date.now();
     const asstMsgId = 'msg-' + (Date.now() + 1);

@@ -32,9 +32,9 @@ export interface Satellite {
   countdownSeconds: number; // 倒计时秒数
   inboundElapsedSeconds?: number; // 入境已持续秒数（用于一轨成像前1分钟判定）
   groundStation: string; // 建链地面站
-  // 一轨成像建链状态机：connecting(建链中) | success(建链成功，可发指令) | failed(建链失败) | expired(可发指令窗口已过期)
-  linkState?: 'connecting' | 'success' | 'failed' | 'expired';
-  linkStateSeconds?: number; // 建链状态倒计时（建链中的剩余耗时 / 建链成功后可发送指令的剩余秒数）
+  // 一轨成像建链状态机：connecting(建链中) → link-success(建链成功)/link-failed(建链失败) → start-success(星上模型已启动)/start-failed(启动失败) → sendable(可发指令) → window-closed(指令窗口已结束)
+  linkState?: 'connecting' | 'link-success' | 'link-failed' | 'start-success' | 'start-failed' | 'sendable' | 'window-closed';
+  linkStateSeconds?: number; // 建链状态倒计时（各阶段的剩余耗时 / 可发送指令的剩余秒数）
   maxElevation: number; // 最大过境仰角 (度)
   imagingWindow: string; // 窗口期
   resolution: string; // 地面分辨率
@@ -43,6 +43,9 @@ export interface Satellite {
   batteryLevel: number; // 电量 %
   tempCore: number; // 核心温度 ℃
   downlinkSpeed: string; // 下传速率 Gbps
+  subSatellitePoint?: { region: string; lng: number; lat: number }; // 星下点预测：区域名 + 实时经纬度（6位小数）
+  subSatelliteBase?: { lng: number; lat: number }; // 星下点预测基准点，用于推算实时漂移
+  subSatelliteTrackSeconds?: number; // 星下点预测已运行时长（秒），驱动经纬度实时变化
 }
 
 // 阶段步骤 Key

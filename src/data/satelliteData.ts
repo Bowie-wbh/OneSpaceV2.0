@@ -17,6 +17,8 @@ export const INITIAL_SATELLITES: Satellite[] = [
     batteryLevel: 96,
     tempCore: 18.2,
     downlinkSpeed: '1.5 Gbps',
+    subSatellitePoint: { region: '塔里木盆地', lng: 82.3, lat: 40.1 },
+    subSatelliteBase: { lng: 82.3, lat: 40.1 },
   },
   {
     id: 'zj-tm01',
@@ -35,6 +37,8 @@ export const INITIAL_SATELLITES: Satellite[] = [
     batteryLevel: 91,
     tempCore: 19.5,
     downlinkSpeed: '1.2 Gbps',
+    subSatellitePoint: { region: '鄂霍次克海', lng: 148.6, lat: 55.4 },
+    subSatelliteBase: { lng: 148.6, lat: 55.4 },
   },
   {
     id: 'tg-02',
@@ -53,6 +57,8 @@ export const INITIAL_SATELLITES: Satellite[] = [
     batteryLevel: 88,
     tempCore: 17.8,
     downlinkSpeed: '2.0 Gbps',
+    subSatellitePoint: { region: '南海中沙群岛', lng: 114.2, lat: 15.8 },
+    subSatelliteBase: { lng: 114.2, lat: 15.8 },
   },
   {
     id: 'tx-03',
@@ -69,6 +75,8 @@ export const INITIAL_SATELLITES: Satellite[] = [
     batteryLevel: 94,
     tempCore: 16.9,
     downlinkSpeed: '1.8 Gbps',
+    subSatellitePoint: { region: '贝加尔湖', lng: 104.9, lat: 53.5 },
+    subSatelliteBase: { lng: 104.9, lat: 53.5 },
   }
 ];
 

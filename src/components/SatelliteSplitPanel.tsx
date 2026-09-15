@@ -3,7 +3,8 @@ import {
   X, 
   Satellite as SatelliteIcon, 
   Clock, 
-  Radio
+  Radio,
+  MapPin
 } from 'lucide-react';
 import { Satellite } from '../types';
 
@@ -136,6 +137,16 @@ export const SatelliteSplitPanel: React.FC<SatelliteSplitPanelProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {/* 第三行：星下点预测 */}
+                    {sat.subSatellitePoint && (
+                      <div className="mt-2 px-2 py-1.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-500/10 border border-emerald-200/70 dark:border-emerald-500/20 flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span className="text-[10px] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300 truncate">
+                          {sat.subSatellitePoint.region}（{sat.subSatellitePoint.lng.toFixed(6)}, {sat.subSatellitePoint.lat.toFixed(6)}）
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -209,6 +220,16 @@ export const SatelliteSplitPanel: React.FC<SatelliteSplitPanelProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {/* 第三行：星下点预测 */}
+                    {sat.subSatellitePoint && (
+                      <div className="mt-2 px-2 py-1.5 rounded-lg bg-slate-50/80 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/[0.06] flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
+                          {sat.subSatellitePoint.region}（{sat.subSatellitePoint.lng.toFixed(6)}, {sat.subSatellitePoint.lat.toFixed(6)}）
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}

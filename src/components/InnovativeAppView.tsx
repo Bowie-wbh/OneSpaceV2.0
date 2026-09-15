@@ -1653,7 +1653,7 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
     pushMsg(downlinkMsgId, { content: '等待星上结果下传………' }, t += stages.length * 550 + 700);
 
     const processSteps = [
-      '星上模型启动', '任务解析完成', '任务规划完成', '遥控指令生成', '相机成像', '成像数据落盘',
+      '星上模型启动', '任务解析完成', '遥控指令生成', '任务规划完成', '相机成像', '成像数据落盘',
       '云判', '火灾检测', '模型推理完成', '开始落盘到固存', '落盘固存完成', '文件启动下传',
       '文件下传到地面站', '码流文件解析', '模型结果解析', '任务完成',
     ];
