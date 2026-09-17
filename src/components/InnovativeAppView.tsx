@@ -1204,7 +1204,7 @@ function MonitorCard({
       <div className="overflow-y-auto">
         {activeTab === 'spatial' ? (
           <div>
-            {/* 模块零：空间要素 —— 林火监测 / 古建筑分类下拉筛选 */}
+            {/* 模块零：空间要素 —— 全球林火巡查 / 古建筑分类下拉筛选 */}
             <div className="p-3.5 border-t border-white/10 first:border-t-0">
           <div className="relative">
             <button
@@ -1222,7 +1222,7 @@ function MonitorCard({
                   }`}
                 />
                 <span className="text-xs font-bold text-white">
-                  {activeSpatialCategory === 'fire' ? '林火监测' : '古建筑'}
+                  {activeSpatialCategory === 'fire' ? '全球林火自主巡查' : '古建筑'}
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono">
                   {activeSpatialCategory === 'fire' ? firePointsCount : buildingPointsCount} 处
@@ -1240,7 +1240,7 @@ function MonitorCard({
                   }`}
                 >
                   <span className="w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-white flex-shrink-0" />
-                  <span>林火监测</span>
+                  <span>林火巡查</span>
                   <span className="ml-auto text-[10px] text-slate-500 font-mono">{firePointsCount}</span>
                 </button>
                 <button
@@ -2604,7 +2604,7 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
   const [activeFootprint, setActiveFootprint] = useState<HistoryRecord | null>(null);
-  // 默认仅展示林火监测点位（与空间要素筛选下拉的互斥单选逻辑保持一致，避免古建筑点位默认叠加显示）
+  // 默认仅展示林火巡查点位（与空间要素筛选下拉的互斥单选逻辑保持一致，避免古建筑点位默认叠加显示）
   const [showFire3D, setShowFire3D] = useState<boolean>(true);
   const [showBuilding3D, setShowBuilding3D] = useState<boolean>(false);
   const [selectedSpatialPoint, setSelectedSpatialPoint] = useState<SpatialMarkerPoint | null>(null);
@@ -2719,11 +2719,11 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                       您好，我是OneSpace，可以帮您安排「{selectedApp.title}」任务，您可以跟我说：
                     </h2>
                     <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                      <button type="button" onClick={() => handleSendDashboardMessage('开启林火监测任务')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
-                        开启林火监测任务
+                      <button type="button" onClick={() => handleSendDashboardMessage('开启林火巡查任务')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
+                        开启林火巡查任务
                       </button>
-                      <button type="button" onClick={() => handleSendDashboardMessage('中断林火监测任务')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
-                        中断林火监测任务
+                      <button type="button" onClick={() => handleSendDashboardMessage('中断林火巡查任务')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
+                        中断林火巡查任务
                       </button>
                       <button type="button" onClick={() => handleSendDashboardMessage('同步进度')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
                         同步进度

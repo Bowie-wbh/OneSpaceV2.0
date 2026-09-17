@@ -43,7 +43,7 @@ import {
 
 // 统一对话页打招呼推荐问题（整合任务规划/健康管理/创新应用三类场景）
 const WORKSPACE_SUGGESTED_PROMPTS = [
-  '开启林火监测任务',
+  '开启林火巡查任务',
   '帮我评估一下星载路由系统最近十天的状态',
   '安排明天下午宁波港口的观测任务，并检测是否有火灾',
 ];
@@ -627,14 +627,14 @@ export function App() {
         }
       ]);
     } else if (sessionId === 'sess-fire-1') {
-      // “林火监测”对话记录呈现在主对话区，具体流程步骤统一在看板区（创新应用监控卡）呈现
+      // “林火巡查”对话记录呈现在主对话区，具体流程步骤统一在看板区（创新应用监控卡）呈现
       setActiveTab('workspace');
       setWorkspaceViewMode('split');
       setWorkspaceKanbanFilter('innovative');
 
       const fireApp: InnovativeAppItem = {
         id: 'app-preset-1',
-        title: '全球火险监测',
+        title: '全球火险巡查',
         startDate: '2026-09-01',
         endDate: '2026-09-07',
         totalDays: 7,
@@ -650,15 +650,15 @@ export function App() {
         {
           id: 'hist-fire-user-1',
           role: 'user',
-          content: '开启林火监测任务',
+          content: '开启林火巡查任务',
           timestamp: '09:40',
           mode: 'time_series',
         },
         {
           id: 'hist-fire-asst-1',
           role: 'assistant',
-          thinkingProcess: '1. 截获林火监测任务开启意图。\n2. 引导用户输入监测任务起止日期。',
-          content: '好的，请提供本次监测任务的**开始日期**和**结束日期**（例如：`2026-09-05` 至 `2026-09-11`）。',
+          thinkingProcess: '1. 截获林火巡查任务开启意图。\n2. 引导用户输入巡查任务起止日期。',
+          content: '好的，请提供本次巡查任务的**开始日期**和**结束日期**（例如：`2026-09-05` 至 `2026-09-11`）。',
           timestamp: '09:40',
           mode: 'time_series',
         },
@@ -673,7 +673,7 @@ export function App() {
           id: 'hist-fire-asst-2',
           role: 'assistant',
           thinkingProcess: '1. 解析任务周期：2026-09-01 至 2026-09-07\n2. 校验星载相机资源与轨道过境时段。\n3. 生成启动确认指令。',
-          content: '好的，任务周期为 **2026-09-01 ~ 2026-09-07**，确认发起「全球火险监测」任务吗？',
+          content: '好的，任务周期为 **2026-09-01 ~ 2026-09-07**，确认发起「全球火险巡查」任务吗？',
           timestamp: '09:41',
           mode: 'time_series',
           confirmChoice: true,
@@ -689,7 +689,7 @@ export function App() {
         {
           id: 'hist-fire-asst-3',
           role: 'assistant',
-          thinkingProcess: '1. 任务正式立项并更新看板：全球火险监测\n2. 周期：2026-09-01 至 2026-09-07（共 7 天）\n3. 启动自动化感知与林科院高风险点拍摄需求接收...',
+          thinkingProcess: '1. 任务正式立项并更新看板：全球火险巡查\n2. 周期：2026-09-01 至 2026-09-07（共 7 天）\n3. 启动自动化感知与林科院高风险点拍摄需求接收...',
           content: '任务已发起，当前周期：**2026-09-01 ~ 2026-09-07**（已执行 0/7 天）。\n看板区监测面板已同步更新为执行中状态。',
           timestamp: '09:42',
           mode: 'time_series',
@@ -2391,7 +2391,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     | { type: 'awaiting_interrupt_confirm' }
   >({ type: 'idle' });
 
-  // 处理统一对话流中创新应用（林火监测任务）开始/中断/进度同步等全流程
+  // 处理统一对话流中创新应用（林火巡查任务）开始/中断/进度同步等全流程
   const handleInnovativeTaskFlow = (text: string) => {
     handleCreateHistorySession(text, 'task-planning');
     setWorkspaceKanbanFilter('innovative');
@@ -2427,7 +2427,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
           streamAssistantResponse({
             messageId: asstMsgId,
             thinking: `1. 解析任务周期：${startDate} 至 ${endDate}\n2. 校验星载相机资源与轨道过境时段。\n3. 生成启动确认指令。`,
-            content: `好的，任务周期为 **${startDate} ~ ${endDate}**，确认发起「全球火险监测」任务吗？`,
+            content: `好的，任务周期为 **${startDate} ~ ${endDate}**，确认发起「全球火险巡查」任务吗？`,
             mode: 'time_series',
             confirmChoice: true,
           });
@@ -2452,7 +2452,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         
         const activeApp: InnovativeAppItem = {
           id: 'app-preset-1',
-          title: '全球火险监测',
+          title: '全球火险巡查',
           startDate,
           endDate,
           totalDays,
@@ -2529,8 +2529,8 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       return;
     }
 
-    // 4. 用户输入：开启林火监测任务
-    if (trimmed.includes('开启') && (trimmed.includes('林火') || trimmed.includes('监测') || trimmed.includes('任务'))) {
+    // 4. 用户输入：开启林火巡查任务
+    if (trimmed.includes('开启') && (trimmed.includes('林火') || trimmed.includes('巡查') || trimmed.includes('任务'))) {
       if (selectedInnovativeApp?.status === '进行中') {
         setTimeout(() => {
           streamAssistantResponse({
@@ -2544,8 +2544,8 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         setTimeout(() => {
           streamAssistantResponse({
             messageId: asstMsgId,
-            thinking: `1. 截获林火监测任务开启意图。\n2. 引导用户输入监测任务起止日期。`,
-            content: '好的，请提供本次监测任务的**开始日期**和**结束日期**（例如：`2026-09-05` 至 `2026-09-11`）。',
+            thinking: `1. 截获林火巡查任务开启意图。\n2. 引导用户输入巡查任务起止日期。`,
+            content: '好的，请提供本次巡查任务的**开始日期**和**结束日期**（例如：`2026-09-05` 至 `2026-09-11`）。',
             mode: 'time_series',
           });
         }, 200);
@@ -2554,7 +2554,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     }
 
     // 5. 用户输入：中断任务
-    if (trimmed.includes('中断') && (trimmed.includes('任务') || trimmed.includes('林火') || trimmed.includes('监测'))) {
+    if (trimmed.includes('中断') && (trimmed.includes('任务') || trimmed.includes('林火') || trimmed.includes('巡查'))) {
       if (selectedInnovativeApp?.status === '进行中') {
         setInnovativeFlowState({ type: 'awaiting_interrupt_confirm' });
         setTimeout(() => {
@@ -2613,7 +2613,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         startDate: '2026-09-05',
         endDate: '2026-09-11',
         totalDays: 7,
-        source: '林科院林火监测',
+        source: '林科院林火巡查',
       });
       return;
     }
@@ -2626,7 +2626,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     }
 
     // 识别创新应用意图或处于创新应用状态机中
-    const isInnovativeIntent = /开启.*林火|林火监测|全球火险|林火.*任务|创新应用|中断.*任务|中断.*林火|中断.*监测|同步.*进度|任务.*进度/i.test(text);
+    const isInnovativeIntent = /开启.*林火|林火巡查|全球火险|林火.*任务|创新应用|中断.*任务|中断.*林火|中断.*巡查|同步.*进度|任务.*进度/i.test(text);
     // 状态机非 idle 时，仅当输入内容像是在延续该流程（日期/确认/取消）才继续拦截，
     // 避免用户中途切换成无关的常规任务需求时被误判为创新应用流程的后续回复
     const looksLikeInnovativeContinuation = innovativeFlowState.type === 'awaiting_dates'
