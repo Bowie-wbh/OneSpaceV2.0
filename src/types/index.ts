@@ -5,7 +5,7 @@ export type MainTabType = 'workspace' | 'achievement-management';
 // 统一对话页三种展示模式：对话+看板 | 仅看板 | 仅对话
 export type WorkspaceViewMode = 'split' | 'kanban' | 'chat';
 
-// 统一对话页右上角看板筛选：任务管理看板（空）| 健康管理看板 | 创新应用看板
+// 统一对话页右上角看板筛选：任务管理看板 | 健康管理看板 | OneEarth太空部分看板
 export type WorkspaceKanbanFilter = 'task' | 'health' | 'innovative';
 
 export interface AchievementItem {

@@ -208,8 +208,8 @@ export function App() {
   const [activeTab, setActiveTab] = useState<MainTabType>('workspace');
   // 统一对话页展示模式：对话+看板 | 仅看板 | 仅对话
   const [workspaceViewMode, setWorkspaceViewMode] = useState<WorkspaceViewMode>('split');
-  // 统一对话页看板筛选：任务管理看板 | 健康管理看板 | 创新应用看板（默认初次进入任务管理看板）
-  const [workspaceKanbanFilter, setWorkspaceKanbanFilter] = useState<WorkspaceKanbanFilter>('task');
+  // 统一对话页看板筛选：任务管理看板 | 健康管理看板 | OneEarth太空部分（默认初次进入 OneEarth太空部分）
+  const [workspaceKanbanFilter, setWorkspaceKanbanFilter] = useState<WorkspaceKanbanFilter>('innovative');
   // 统一对话页对话区可调节宽度（split 模式下生效）
   const [workspaceChatPanelWidth, setWorkspaceChatPanelWidth] = useState<number>(460);
   const [isDraggingWorkspaceSplitter, setIsDraggingWorkspaceSplitter] = useState<boolean>(false);
@@ -2999,6 +2999,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
                         selectedApp={selectedInnovativeApp}
                         onSelectApp={setSelectedInnovativeApp}
                         viewMode="kanban"
+                        satellites={satellites}
                         onLaunchApp={(appName) => {
                           setWorkspaceViewMode(prev => (prev === 'kanban' ? 'split' : prev));
                           setPrefillPrompt(`帮我启动【${appName}】任务规划与星载算法下发`);

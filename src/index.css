@@ -197,6 +197,23 @@
   50% {
     transform: rotate(180deg) scale(1.06);
     opacity: 0.5;
+
+/* Cesium 仿真地球容器与部件样式 */
+.cesium-viewer,
+.cesium-viewer-cesiumWidgetContainer,
+.cesium-widget,
+.cesium-widget canvas {
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+  outline: none;
+}
+
+/* 隐藏 Cesium 默认版权冗余浮层 */
+.cesium-widget-credits {
+  display: none !important;
+}
+
   }
 }
 

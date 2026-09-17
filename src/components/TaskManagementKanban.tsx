@@ -62,6 +62,91 @@ const RESULT_TABS: { key: string; label: string; filterClass: string }[] = [
 ];
 const RESULT_IMAGE_URL = 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80';
 
+// 用量统计费用类目（成像/在轨预处理/在轨推理/数据暂存/下传各费用构成明细，颜色与系统统一配色体系一致）
+interface UsageCostItem {
+  name: string;
+  formula: string;
+  amount: number;
+}
+interface UsageCostCategory {
+  key: string;
+  label: string;
+  total: number;
+  textClass: string;
+  bgClass: string;
+  chipTextClass: string;
+  chipBgClass: string;
+  items: UsageCostItem[];
+}
+const USAGE_COST_CATEGORIES: UsageCostCategory[] = [
+  {
+    key: 'imaging',
+    label: '成像费',
+    total: 1186.0,
+    textClass: 'text-blue-600 dark:text-sky-400',
+    bgClass: 'bg-blue-600 dark:bg-sky-500',
+    chipTextClass: 'text-blue-600 dark:text-sky-400',
+    chipBgClass: 'bg-blue-50 dark:bg-sky-500/15',
+    items: [
+      { name: '任务调度费', formula: '1次 × 200.00元/次 × 1', amount: 200.0 },
+      { name: '成像时长费', formula: '240卡·秒 × 2.00元/卡·秒 × 1', amount: 480.0 },
+      { name: '侧摆附加费', formula: '1次 × 500.00元/次 × 1', amount: 500.0 },
+      { name: '原始数据暂存费', formula: '3GB·h × 2.00元/GB·h × 1', amount: 6.0 },
+    ],
+  },
+  {
+    key: 'processing',
+    label: '在轨预处理费',
+    total: 800.0,
+    textClass: 'text-violet-600 dark:text-violet-400',
+    bgClass: 'bg-violet-600 dark:bg-violet-500',
+    chipTextClass: 'text-violet-600 dark:text-violet-400',
+    chipBgClass: 'bg-violet-50 dark:bg-violet-500/15',
+    items: [
+      { name: 'NPU卡时费', formula: '0.05卡时 × 8000.00元/卡时 × 复杂度2 × 功耗1', amount: 800.0 },
+    ],
+  },
+  {
+    key: 'inference',
+    label: '在轨推理费',
+    total: 0.1715,
+    textClass: 'text-amber-600 dark:text-amber-400',
+    bgClass: 'bg-amber-600 dark:bg-amber-500',
+    chipTextClass: 'text-amber-600 dark:text-amber-400',
+    chipBgClass: 'bg-amber-50 dark:bg-amber-500/15',
+    items: [
+      { name: '输入token费', formula: '182,400 tokens × 0.50元/百万tokens × 1', amount: 0.076 },
+      { name: '输出token费', formula: '38,200 tokens × 2.50元/百万tokens × 1', amount: 0.0955 },
+    ],
+  },
+  {
+    key: 'storage',
+    label: '数据暂存费',
+    total: 6.2,
+    textClass: 'text-emerald-600 dark:text-emerald-400',
+    bgClass: 'bg-emerald-600 dark:bg-emerald-500',
+    chipTextClass: 'text-emerald-600 dark:text-emerald-400',
+    chipBgClass: 'bg-emerald-50 dark:bg-emerald-500/15',
+    items: [
+      { name: '热存储费', formula: '1GB·h × 5.00元/GB·h × 1', amount: 5.0 },
+      { name: '温存储费', formula: '0.6GB·h × 2.00元/GB·h × 1', amount: 1.2 },
+    ],
+  },
+  {
+    key: 'downlink',
+    label: '下传费',
+    total: 82.5,
+    textClass: 'text-orange-600 dark:text-orange-400',
+    bgClass: 'bg-orange-600 dark:bg-orange-500',
+    chipTextClass: 'text-orange-600 dark:text-orange-400',
+    chipBgClass: 'bg-orange-50 dark:bg-orange-500/15',
+    items: [
+      { name: '下传费', formula: '0.55GB × 1500.00元/GB × 1', amount: 82.5 },
+    ],
+  },
+];
+const USAGE_COST_TOTAL = USAGE_COST_CATEGORIES.reduce((sum, cat) => sum + cat.total, 0);
+
 // ── 自定义日期选择器组件（严格统一系统 UI 设计与暗色/亮色配色） ───────────────
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -282,6 +367,7 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
   const [chatCreatedTasks, setChatCreatedTasks] = useState<PlannedTaskItem[]>([]);
   const [selectedResultTab, setSelectedResultTab] = useState<string>(RESULT_TABS[0].key);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [activeCostCategory, setActiveCostCategory] = useState<string | null>(USAGE_COST_CATEGORIES[0].key);
   const [taskListPage, setTaskListPage] = useState(1);
   const TASK_LIST_PAGE_SIZE_OPTIONS = [10, 20, 50];
   const [taskListPageSize, setTaskListPageSize] = useState(TASK_LIST_PAGE_SIZE_OPTIONS[0]);
@@ -672,6 +758,134 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
               </div>
               )}
             </div>
+
+            {/* 用量统计：星上处理流程全部完成后才呈现费用构成明细 */}
+            <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.06] bg-slate-50/40 dark:bg-white/[0.02] overflow-hidden mb-1">
+              <div className="px-3.5 sm:px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.06] bg-slate-50/80 dark:bg-white/[0.02] flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-blue-600 dark:bg-sky-500" />
+                <h5 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 font-sans">用量统计</h5>
+              </div>
+              {taskFailed ? (
+                <div className="p-6 flex items-center justify-center text-xs text-red-500 dark:text-red-400 font-sans">
+                  任务已失败，无可用量数据
+                </div>
+              ) : onboardStepIndex < ONBOARD_STAGE_LABELS.length ? (
+                <div className="p-6 flex items-center justify-center text-xs text-slate-400 font-sans">
+                  星上处理流程尚未完成，用量统计生成后将在此处展示
+                </div>
+              ) : (
+              <div className="p-3.5 sm:p-4 space-y-3.5">
+                {/* 费用构成占比 */}
+                <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#121829] p-3 sm:p-3.5">
+                  <div className="flex items-end justify-between mb-3">
+                    <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 font-sans">费用构成</span>
+                    <div className="text-right leading-none">
+                      <span className="text-[10px] text-slate-400 mr-1.5 font-sans">总费用</span>
+                      <span className="font-bold text-sm sm:text-base text-blue-600 dark:text-sky-400 tabular-nums">
+                        ¥{USAGE_COST_TOTAL.toLocaleString('zh-CN', { minimumFractionDigits: 4 })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex h-2 rounded-full overflow-hidden gap-0.5 mb-3.5 bg-slate-100 dark:bg-white/[0.04]">
+                    {USAGE_COST_CATEGORIES.map((cat) => {
+                      const pct = (cat.total / USAGE_COST_TOTAL) * 100;
+                      return (
+                        <div
+                          key={cat.key}
+                          className={`${cat.bgClass} rounded-full`}
+                          style={{ width: `${pct}%`, minWidth: pct > 0.05 ? '3px' : 0 }}
+                          title={`${cat.label} ¥${cat.total.toFixed(4)}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
+                    {USAGE_COST_CATEGORIES.map((cat) => {
+                      const pct = (cat.total / USAGE_COST_TOTAL) * 100;
+                      return (
+                        <div key={cat.key} className="flex items-center gap-2 min-w-0">
+                          <span className={`w-1 h-7 rounded-full flex-shrink-0 ${cat.bgClass}`} />
+                          <div className="min-w-0">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-sans">{cat.label}</span>
+                              <span className={`text-[10px] font-bold tabular-nums ${cat.textClass}`}>{pct.toFixed(1)}%</span>
+                            </div>
+                            <div className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tabular-nums leading-tight">
+                              ¥{cat.total.toFixed(4)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 费用明细：按类目展开查看计费公式 */}
+                <div className="space-y-2">
+                  {USAGE_COST_CATEGORIES.map((cat) => {
+                    const isActive = activeCostCategory === cat.key;
+                    return (
+                      <div
+                        key={cat.key}
+                        onClick={() => setActiveCostCategory((prev) => (prev === cat.key ? null : cat.key))}
+                        className={`rounded-xl border overflow-hidden transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-white dark:bg-[#121829] border-slate-200 dark:border-white/[0.1]'
+                            : 'bg-white/70 dark:bg-white/[0.015] border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 dark:hover:border-white/[0.12]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between px-3.5 py-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`w-1.5 h-5 rounded-full flex-shrink-0 ${cat.bgClass}`} />
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-sans truncate">{cat.label}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${cat.chipBgClass} ${cat.chipTextClass}`}>
+                              {cat.items.length} 项
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <span className={`text-xs sm:text-sm font-bold tabular-nums ${cat.textClass}`}>¥{cat.total.toFixed(4)}</span>
+                            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isActive ? 'rotate-180' : ''}`} />
+                          </div>
+                        </div>
+
+                        {isActive && (
+                          <div
+                            className="border-t border-slate-100 dark:border-white/[0.06] divide-y divide-slate-100 dark:divide-white/[0.04]"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {cat.items.map((item, i) => (
+                              <div key={i} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <span className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 font-sans shrink-0">
+                                  {item.name}
+                                </span>
+                                <div className="flex items-center gap-1 flex-wrap justify-end min-w-0">
+                                  {item.formula.split('×').map((part, pi, arr) => (
+                                    <span key={pi} className="flex items-center gap-1">
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.05] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                        {part.trim()}
+                                      </span>
+                                      {pi < arr.length - 1 && <span className="text-[10px] text-slate-300 dark:text-slate-600">×</span>}
+                                    </span>
+                                  ))}
+                                </div>
+                                <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 tabular-nums shrink-0 min-w-[5rem] text-right">
+                                  ¥{item.amount.toFixed(4)}
+                                </span>
+                              </div>
+                            ))}
+                            <div className="flex items-center justify-between px-3.5 py-2">
+                              <span className="text-[10px] text-slate-400 font-sans">小计</span>
+                              <span className={`text-xs font-bold tabular-nums ${cat.textClass}`}>¥{cat.total.toFixed(4)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -823,6 +1037,7 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
                       setSelectedTaskDetail(task);
                       setSelectedResultTab(RESULT_TABS[0].key);
                       setDownloadSuccess(false);
+                      setActiveCostCategory(USAGE_COST_CATEGORIES[0].key);
                     }}
                     className="hover:bg-blue-50/40 dark:hover:bg-sky-950/20 transition-colors group cursor-pointer"
                   >
