@@ -36,6 +36,40 @@ export const SatelliteSplitPanel: React.FC<SatelliteSplitPanelProps> = ({
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
+  // 解析窗口期计算入境、出境时间与过境时长
+  const parseWindowTimes = (sat: Satellite) => {
+    let entry = '14:25:30';
+    let exit = '14:32:15';
+    let duration = '6分45秒';
+
+    if (sat.imagingWindow && sat.imagingWindow.includes('-')) {
+      const parts = sat.imagingWindow.split('-').map((s) => s.trim());
+      if (parts.length >= 2) {
+        entry = parts[0];
+        exit = parts[1];
+
+        // 计算时差
+        const parseSec = (t: string) => {
+          const segs = t.split(':').map(Number);
+          if (segs.length === 3) return segs[0] * 3600 + segs[1] * 60 + segs[2];
+          if (segs.length === 2) return segs[0] * 60 + segs[1];
+          return 0;
+        };
+        const diffSec = Math.max(0, parseSec(exit) - parseSec(entry));
+        if (diffSec > 0) {
+          const m = Math.floor(diffSec / 60);
+          const s = diffSec % 60;
+          duration = m > 0 ? `${m}分${s > 0 ? `${s}秒` : ''}` : `${s}秒`;
+        }
+      }
+    }
+    return {
+      entry,
+      exit,
+      duration,
+    };
+  };
+
   // 分组数据：已入境卫星在上一组、待入境（已出境）卫星在下一组
   const inboundList = useMemo(() => {
     return satellites
@@ -97,12 +131,12 @@ export const SatelliteSplitPanel: React.FC<SatelliteSplitPanelProps> = ({
           {inboundList.length > 0 ? (
             <div className="space-y-2">
               {inboundList.map((sat) => {
-                const isSelected = selectedSatelliteId === sat.id;
+                const times = parseWindowTimes(sat);
                 return (
                   <div
                     key={sat.id}
                     id={`split-sat-${sat.id}`}
-                    className="rounded-xl p-3 bg-gradient-to-br from-emerald-50/60 via-white/80 to-white/70 dark:from-emerald-950/25 dark:via-[#0e1526]/80 dark:to-[#0e1526]/70 border border-emerald-300/70 dark:border-emerald-500/30 shadow-xs"
+                    className="rounded-xl p-3 bg-gradient-to-br from-emerald-50/60 via-white/80 to-white/70 dark:from-emerald-950/25 dark:via-[#0e1526]/80 dark:to-[#0e1526]/70 border border-emerald-300/70 dark:border-emerald-500/30 shadow-xs space-y-2"
                   >
                     {/* 第一行：卫星名称 + 出入境状态 */}
                     <div className="flex items-center justify-between gap-2">
@@ -124,29 +158,80 @@ export const SatelliteSplitPanel: React.FC<SatelliteSplitPanelProps> = ({
                       </span>
                     </div>
 
-                    {/* 第二行：左侧地面站信息，右侧出入境倒计时（文字与时间放在一起） */}
-                    <div className="mt-2.5 pt-2 border-t border-emerald-100/80 dark:border-emerald-900/30 flex items-center justify-between gap-2">
-                      <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                        地面站：{sat.groundStation}
-                      </span>
-                      <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium shrink-0">
-                        <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-[10px] sm:text-xs">距离出境还有</span>
-                        <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                          {formatCountdown(sat.countdownSeconds)}
-                        </span>
+                    {/* 模块一：地面站测控与过境时段卡片 */}
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/10 border border-emerald-300/60 dark:border-emerald-500/25 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Radio className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate">
+                            地面站：<span className="font-bold text-slate-900 dark:text-white">{sat.groundStation}</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium shrink-0">
+                          <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-[11px]">距离出境</span>
+                          <span className="font-mono font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">
+                            {formatCountdown(sat.countdownSeconds)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 过境时段：入境 / 出境 / 时长 三字段 */}
+                      <div className="grid grid-cols-3 gap-1.5 text-[11px] font-mono">
+                        <div className="flex flex-col bg-white/80 dark:bg-emerald-950/50 px-2 py-1 rounded-lg border border-emerald-300/60 dark:border-emerald-500/25 min-w-0 shadow-2xs">
+                          <span className="text-slate-400 dark:text-slate-500 font-sans text-[10px] truncate">入境</span>
+                          <span className="text-emerald-700 dark:text-emerald-300 font-semibold truncate">
+                            {times.entry}
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-white/80 dark:bg-emerald-950/50 px-2 py-1 rounded-lg border border-emerald-300/60 dark:border-emerald-500/25 min-w-0 shadow-2xs">
+                          <span className="text-slate-400 dark:text-slate-500 font-sans text-[10px] truncate">出境</span>
+                          <span className="text-emerald-700 dark:text-emerald-300 font-semibold truncate">
+                            {times.exit}
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-white/80 dark:bg-emerald-950/50 px-2 py-1 rounded-lg border border-emerald-300/60 dark:border-emerald-500/25 min-w-0 shadow-2xs">
+                          <span className="text-slate-400 dark:text-slate-500 font-sans text-[10px] truncate">时长</span>
+                          <span className="text-emerald-700 dark:text-emerald-300 font-semibold truncate">
+                            {times.duration}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* 第三行：星下点预测 */}
-                    {sat.subSatellitePoint && (
-                      <div className="mt-2 px-2 py-1.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-500/10 border border-emerald-200/70 dark:border-emerald-500/20 flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span className="text-[10px] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300 truncate">
-                          {sat.subSatellitePoint.region}（{sat.subSatellitePoint.lng.toFixed(6)}, {sat.subSatellitePoint.lat.toFixed(6)}）
-                        </span>
+                    {/* 模块二：空间遥测（轨道高度、经度、纬度放一行，下方星下点） */}
+                    <div className="p-2.5 rounded-xl bg-white/70 dark:bg-black/30 border border-emerald-200/60 dark:border-white/[0.06] space-y-2">
+                      <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                        <div className="flex flex-col bg-slate-50/90 dark:bg-white/[0.03] px-2 py-1 rounded-lg border border-slate-200/60 dark:border-white/[0.04] min-w-0">
+                          <span className="text-slate-400 dark:text-slate-500 text-[10px] truncate">高度</span>
+                          <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300 truncate">
+                            {sat.altitude.toFixed(3)}km
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-slate-50/90 dark:bg-white/[0.03] px-2 py-1 rounded-lg border border-slate-200/60 dark:border-white/[0.04] min-w-0">
+                          <span className="text-slate-400 dark:text-slate-500 text-[10px] truncate">经度</span>
+                          <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 truncate">
+                            {sat.subSatellitePoint ? `${sat.subSatellitePoint.lng.toFixed(6)}°` : '--'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-slate-50/90 dark:bg-white/[0.03] px-2 py-1 rounded-lg border border-slate-200/60 dark:border-white/[0.04] min-w-0">
+                          <span className="text-slate-400 dark:text-slate-500 text-[10px] truncate">纬度</span>
+                          <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 truncate">
+                            {sat.subSatellitePoint ? `${sat.subSatellitePoint.lat.toFixed(6)}°` : '--'}
+                          </span>
+                        </div>
                       </div>
-                    )}
+
+                      {sat.subSatellitePoint && (
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-50/80 dark:bg-emerald-500/10 border border-emerald-200/70 dark:border-emerald-500/20 text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="text-slate-400 dark:text-slate-500 text-[11px] shrink-0">星下点:</span>
+                          <span className="font-semibold text-emerald-800 dark:text-emerald-200 truncate">
+                            {sat.subSatellitePoint.region}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -180,12 +265,12 @@ export const SatelliteSplitPanel: React.FC<SatelliteSplitPanelProps> = ({
           {upcomingList.length > 0 ? (
             <div className="space-y-2">
               {upcomingList.map((sat) => {
-                const isSelected = selectedSatelliteId === sat.id;
+                const times = parseWindowTimes(sat);
                 return (
                   <div
                     key={sat.id}
                     id={`split-sat-${sat.id}`}
-                    className="rounded-xl p-3 bg-white/70 dark:bg-[#0e1526]/70 border border-slate-200/80 dark:border-white/[0.06] shadow-xs"
+                    className="rounded-xl p-3 bg-white/70 dark:bg-[#0e1526]/70 border border-slate-200/80 dark:border-white/[0.06] shadow-xs space-y-2"
                   >
                     {/* 第一行：卫星名称 + 出入境状态 */}
                     <div className="flex items-center justify-between gap-2">
@@ -207,29 +292,80 @@ export const SatelliteSplitPanel: React.FC<SatelliteSplitPanelProps> = ({
                       </span>
                     </div>
 
-                    {/* 第二行：左侧地面站信息，右侧出入境倒计时（文字与时间放在一起） */}
-                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/[0.04] flex items-center justify-between gap-2">
-                      <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                        地面站：{sat.groundStation}
-                      </span>
-                      <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium shrink-0">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-[10px] sm:text-xs">距入境还有</span>
-                        <span className="font-mono font-bold text-sm text-blue-600 dark:text-sky-400">
-                          {formatCountdown(sat.countdownSeconds)}
-                        </span>
+                    {/* 模块一：地面站测控与过境时段卡片 */}
+                    <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Radio className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                          <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate">
+                            地面站：<span className="font-bold text-slate-900 dark:text-white">{sat.groundStation}</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-medium shrink-0">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-[11px]">距离入境</span>
+                          <span className="font-mono font-bold text-xs sm:text-sm text-blue-600 dark:text-sky-400">
+                            {formatCountdown(sat.countdownSeconds)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 过境时段：入境 / 出境 / 时长 三字段 */}
+                      <div className="grid grid-cols-3 gap-1.5 text-[11px] font-mono">
+                        <div className="flex flex-col bg-white dark:bg-white/[0.04] px-2 py-1 rounded-lg border border-slate-200/80 dark:border-white/[0.06] min-w-0 shadow-2xs">
+                          <span className="text-slate-400 dark:text-slate-500 font-sans text-[10px] truncate">入境</span>
+                          <span className="text-slate-700 dark:text-slate-200 font-semibold truncate">
+                            {times.entry}
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-white dark:bg-white/[0.04] px-2 py-1 rounded-lg border border-slate-200/80 dark:border-white/[0.06] min-w-0 shadow-2xs">
+                          <span className="text-slate-400 dark:text-slate-500 font-sans text-[10px] truncate">出境</span>
+                          <span className="text-slate-700 dark:text-slate-200 font-semibold truncate">
+                            {times.exit}
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-white dark:bg-white/[0.04] px-2 py-1 rounded-lg border border-slate-200/80 dark:border-white/[0.06] min-w-0 shadow-2xs">
+                          <span className="text-slate-400 dark:text-slate-500 font-sans text-[10px] truncate">时长</span>
+                          <span className="text-slate-700 dark:text-slate-200 font-semibold truncate">
+                            {times.duration}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* 第三行：星下点预测 */}
-                    {sat.subSatellitePoint && (
-                      <div className="mt-2 px-2 py-1.5 rounded-lg bg-slate-50/80 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/[0.06] flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                        <span className="text-[10px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
-                          {sat.subSatellitePoint.region}（{sat.subSatellitePoint.lng.toFixed(6)}, {sat.subSatellitePoint.lat.toFixed(6)}）
-                        </span>
+                    {/* 模块二：空间遥测（轨道高度、经度、纬度放一行，下方星下点） */}
+                    <div className="p-2.5 rounded-xl bg-slate-50/60 dark:bg-black/30 border border-slate-200/60 dark:border-white/[0.06] space-y-2">
+                      <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                        <div className="flex flex-col bg-white/80 dark:bg-white/[0.03] px-2 py-1 rounded-lg border border-slate-200/60 dark:border-white/[0.04] min-w-0">
+                          <span className="text-slate-400 dark:text-slate-500 text-[10px] truncate">高度</span>
+                          <span className="font-mono font-bold text-slate-700 dark:text-slate-200 truncate">
+                            {sat.altitude.toFixed(3)}km
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-white/80 dark:bg-white/[0.03] px-2 py-1 rounded-lg border border-slate-200/60 dark:border-white/[0.04] min-w-0">
+                          <span className="text-slate-400 dark:text-slate-500 text-[10px] truncate">经度</span>
+                          <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 truncate">
+                            {sat.subSatellitePoint ? `${sat.subSatellitePoint.lng.toFixed(6)}°` : '--'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col bg-white/80 dark:bg-white/[0.03] px-2 py-1 rounded-lg border border-slate-200/60 dark:border-white/[0.04] min-w-0">
+                          <span className="text-slate-400 dark:text-slate-500 text-[10px] truncate">纬度</span>
+                          <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 truncate">
+                            {sat.subSatellitePoint ? `${sat.subSatellitePoint.lat.toFixed(6)}°` : '--'}
+                          </span>
+                        </div>
                       </div>
-                    )}
+
+                      {sat.subSatellitePoint && (
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-100/80 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/[0.06] text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                          <span className="text-slate-400 dark:text-slate-500 text-[11px] shrink-0">星下点:</span>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
+                            {sat.subSatellitePoint.region}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}

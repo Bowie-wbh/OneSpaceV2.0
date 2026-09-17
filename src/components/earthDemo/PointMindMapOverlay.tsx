@@ -608,72 +608,93 @@ export const PointMindMapOverlay: React.FC<PointMindMapOverlayProps> = ({
             </div>
 
             {/* 二级卡片：点击一级展开的 L1~L4 处理级别（统一玻璃质感半透明设计） */}
-            {lvl1.children.map((lvl2) => (
-              <div
-                key={`node-lvl2-${lvl2.id}`}
-                onClick={() => {
-                  const targetLevel = lvl1.branch.levels.find((lv) => lv.level === lvl2.level);
-                  onSelectDataTypeLevel?.(lvl1.branch.name, lvl2.level, lvl2.content);
-                  setSelectedLevel2({
-                    branchName: lvl1.branch.name,
-                    level: lvl2.level,
-                    content: lvl2.content,
-                    subDetails: targetLevel?.subDetails ?? [],
-                    records: targetLevel?.records ?? [
-                      {
-                        time: '2026-09-10 10:24:05',
-                        location: point.name,
-                        lng: `${point.lng.toFixed(2)}°E`,
-                        lat: `${point.lat.toFixed(2)}°N`,
-                        landType: point.type === 'fire' ? '针叶林' : '建筑用地',
-                        source: point.details.satellite || '云尖沐曦号',
-                      },
-                      {
-                        time: '2026-09-10 06:15:30',
-                        location: point.name,
-                        lng: `${point.lng.toFixed(2)}°E`,
-                        lat: `${point.lat.toFixed(2)}°N`,
-                        landType: point.type === 'fire' ? '针叶林' : '古建群落',
-                        source: '之江天目01号',
-                      },
-                    ],
-                  });
-                }}
-                className="absolute pointer-events-auto rounded-xl px-3 py-2 bg-black/55 hover:bg-black/65 border border-white/15 hover:border-cyan-400/60 backdrop-blur-2xl shadow-xl transition-all duration-200 hover:scale-[1.02] cursor-pointer flex items-center justify-between gap-2.5 group"
-                style={{
-                  left: `${lvl2.x}px`,
-                  top: `${lvl2.y}px`,
-                  width: `${lvl2.width}px`,
-                  height: `${lvl2.height}px`,
-                }}
-                title={`${lvl2.level}: ${lvl2.content}`}
-              >
-                {/* 连线对接端微小锚点 */}
+            {lvl1.children.map((lvl2) => {
+              const isSelected = selectedLevel2?.branchName === lvl1.branch.name && selectedLevel2?.level === lvl2.level;
+              return (
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-cyan-400 border border-white"
-                  style={{
-                    [lvl1.side === 'left' ? 'right' : 'left']: '-3px',
+                  key={`node-lvl2-${lvl2.id}`}
+                  onClick={() => {
+                    const targetLevel = lvl1.branch.levels.find((lv) => lv.level === lvl2.level);
+                    onSelectDataTypeLevel?.(lvl1.branch.name, lvl2.level, lvl2.content);
+                    setSelectedLevel2({
+                      branchName: lvl1.branch.name,
+                      level: lvl2.level,
+                      content: lvl2.content,
+                      subDetails: targetLevel?.subDetails ?? [],
+                      records: targetLevel?.records ?? [
+                        {
+                          time: '2026-09-10 10:24:05',
+                          location: point.name,
+                          lng: `${point.lng.toFixed(2)}°E`,
+                          lat: `${point.lat.toFixed(2)}°N`,
+                          landType: point.type === 'fire' ? '针叶林' : '建筑用地',
+                          source: point.details.satellite || '云尖沐曦号',
+                        },
+                        {
+                          time: '2026-09-10 06:15:30',
+                          location: point.name,
+                          lng: `${point.lng.toFixed(2)}°E`,
+                          lat: `${point.lat.toFixed(2)}°N`,
+                          landType: point.type === 'fire' ? '针叶林' : '古建群落',
+                          source: '之江天目01号',
+                        },
+                      ],
+                    });
                   }}
-                />
+                  className={`absolute pointer-events-auto rounded-xl px-3 py-2 backdrop-blur-2xl transition-all duration-200 cursor-pointer flex items-center justify-between gap-2.5 group ${
+                    isSelected
+                      ? 'bg-cyan-950/75 border-2 border-cyan-400 shadow-[0_0_18px_rgba(56,189,248,0.45)] scale-[1.03]'
+                      : 'bg-black/55 hover:bg-black/65 border border-white/15 hover:border-cyan-400/60 shadow-xl hover:scale-[1.02]'
+                  }`}
+                  style={{
+                    left: `${lvl2.x}px`,
+                    top: `${lvl2.y}px`,
+                    width: `${lvl2.width}px`,
+                    height: `${lvl2.height}px`,
+                  }}
+                  title={`${lvl2.level}: ${lvl2.content}`}
+                >
+                  {/* 连线对接端微小锚点 */}
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border transition-all ${
+                      isSelected
+                        ? 'bg-cyan-300 border-white shadow-[0_0_6px_#38bdf8] scale-125'
+                        : 'bg-cyan-400 border-white'
+                    }`}
+                    style={{
+                      [lvl1.side === 'left' ? 'right' : 'left']: '-3px',
+                    }}
+                  />
 
-                <div className="flex items-center gap-2.5 min-w-0 z-10">
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 flex-shrink-0">
-                    {lvl2.level}
-                  </span>
-                  <span className="text-[11px] text-slate-200 group-hover:text-white truncate font-medium">
-                    {lvl2.content}
-                  </span>
+                  <div className="flex items-center gap-2.5 min-w-0 z-10">
+                    <span
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 transition-colors ${
+                        isSelected
+                          ? 'bg-cyan-400 text-slate-950 shadow-sm font-extrabold'
+                          : 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40'
+                      }`}
+                    >
+                      {lvl2.level}
+                    </span>
+                    <span
+                      className={`text-[11px] truncate font-medium transition-colors ${
+                        isSelected ? 'text-cyan-100 font-bold' : 'text-slate-200 group-hover:text-white'
+                      }`}
+                    >
+                      {lvl2.content}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </React.Fragment>
         );
       })}
 
-      {/* 二级数据列表面板：点击二级处理级别后，在画布中下方展示其具体数据表格 */}
+      {/* 二级数据列表面板：点击二级处理级别后，靠左且略微偏上展示其具体数据表格，半透明毛玻璃，不遮挡底部居中状态标尺 */}
       {selectedLevel2 && (
-        <div className="absolute left-1/2 bottom-6 -translate-x-1/2 pointer-events-auto z-40 w-[620px] max-w-[92vw] rounded-2xl bg-[#0c101c]/80 border border-white/15 backdrop-blur-2xl shadow-2xl animate-fadeIn overflow-hidden">
-          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-white/15 bg-white/[0.02]">
+        <div className="absolute left-4 sm:left-6 bottom-16 pointer-events-auto z-40 w-[620px] max-w-[calc(100vw-2rem)] rounded-2xl bg-black/55 border border-white/15 backdrop-blur-2xl shadow-2xl animate-fadeIn overflow-hidden">
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-white/15 bg-white/[0.04]">
             <div className="flex items-center gap-2 min-w-0">
               <Database className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />
               <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 flex-shrink-0">

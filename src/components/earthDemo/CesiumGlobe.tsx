@@ -25,8 +25,8 @@ declare const Cesium: any;
 
 // 卫星编号与 TLE 轨道根数 (SCS-04-16)
 const SATELLITE_NORAD_ID = 'SCS-04-16';
-const SATELLITE_TLE_LINE1 = '1 63985U 25100D   26064.18334074  .00014969  00000-0  48123-3 0  9997';
-const SATELLITE_TLE_LINE2 = '2 63985  97.3743 140.8584 0005924 293.4556  66.6063 15.32340018 44923';
+const SATELLITE_TLE_LINE1 = '1 A0146U 26170D   26258.45368718  .00001470  00000-0  10013-3 0  9992';
+const SATELLITE_TLE_LINE2 = '2 A0146  97.5574 264.3793 0016697  96.5992 263.7138 15.07721651  8062';
 
 // 生成简洁火点小圆点 Canvas (与 2D 视图配色/选中态完全一致：圆点尺寸恒定，选中态仅叠加光圈与发光)
 const createFireMarkerCanvas = (isSelected = false): string => {
@@ -971,27 +971,32 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
         </div>
       )}
 
-      {/* 地球左下角状态标尺 HUD */}
-      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1.5 pointer-events-auto bg-slate-900/85 backdrop-blur-md border border-slate-800/80 rounded-xl p-3 text-xs text-slate-300 shadow-xl max-w-xs">
-        <div className="flex items-center justify-between gap-4">
+      {/* 地球底部中间状态标尺 HUD（横向横条展示） */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 sm:gap-5 pointer-events-auto bg-slate-900/85 backdrop-blur-md border border-slate-800/80 rounded-full px-4 py-2 text-xs text-slate-300 shadow-xl whitespace-nowrap max-w-[95vw] overflow-x-auto">
+        <div className="flex items-center gap-1.5">
           <span className="text-slate-400">相机视高:</span>
           <span className="font-mono text-sky-400 font-medium">{cameraAltitude}</span>
         </div>
-        <div className="flex items-center justify-between gap-4">
+        <span className="w-px h-3 bg-slate-700/80" />
+        <div className="flex items-center gap-1.5">
           <span className="text-slate-400">标定中心坐标:</span>
           <span className="font-mono text-emerald-400">
             {currentEarthObject.lng.toFixed(4)}°E, {currentEarthObject.lat.toFixed(4)}°N
           </span>
         </div>
-        <div className="flex items-center justify-between gap-4">
+        <span className="w-px h-3 bg-slate-700/80" />
+        <div className="flex items-center gap-1.5">
           <span className="text-slate-400">空间基准:</span>
           <span className="text-slate-200">CGCS2000 / WGS-84</span>
         </div>
         {activeFootprint && (
-          <div className="mt-1 pt-1.5 border-t border-slate-800 flex items-center gap-1.5 text-amber-300 text-[11px]">
-            <Sparkles className="w-3.5 h-3.5 flex-shrink-0 animate-pulse" />
-            <span className="truncate">已叠置覆盖范围: {activeFootprint.title}</span>
-          </div>
+          <>
+            <span className="w-px h-3 bg-slate-700/80" />
+            <div className="flex items-center gap-1.5 text-amber-300 text-[11px]">
+              <Sparkles className="w-3.5 h-3.5 flex-shrink-0 animate-pulse" />
+              <span className="truncate max-w-[180px] sm:max-w-xs">已叠置: {activeFootprint.title}</span>
+            </div>
+          </>
         )}
       </div>
 

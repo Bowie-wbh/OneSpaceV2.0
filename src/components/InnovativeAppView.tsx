@@ -312,8 +312,8 @@ function MapPointScreenTracker({
 }
 
 // ── 卫星 TLE 轨道根数 (SCS-04-16 与 3D 仿真地球完全统一) ───────────────────
-const SCS0416_TLE_LINE1 = '1 63985U 25100D   26064.18334074  .00014969  00000-0  48123-3 0  9997';
-const SCS0416_TLE_LINE2 = '2 63985  97.3743 140.8584 0005924 293.4556  66.6063 15.32340018 44923';
+const SCS0416_TLE_LINE1 = '1 A0146U 26170D   26258.45368718  .00001470  00000-0  10013-3 0  9992';
+const SCS0416_TLE_LINE2 = '2 A0146  97.5574 264.3793 0016697  96.5992 263.7138 15.07721651  8062';
 
 // 依据真实 SGP4 轨道动力学模型计算 SCS-04-16 的 2D 地面轨迹航带折线段
 function calculateSCS0416GroundTrack(): [number, number][][] {
@@ -1154,16 +1154,10 @@ function MonitorCard({
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-[#0c101c]/80 border border-white/15 text-slate-100 shadow-2xl backdrop-blur-2xl hover:border-cyan-400/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] transition-all duration-200 cursor-pointer text-xs font-bold group"
+        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#0c101c]/80 border border-white/15 flex items-center justify-center text-cyan-300 shadow-2xl backdrop-blur-2xl hover:border-cyan-400/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] hover:scale-105 transition-all duration-200 cursor-pointer group"
         title="展开空间要素与卫星数据面板"
       >
-        <div className="w-6 h-6 rounded-xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center text-cyan-300 group-hover:scale-105 transition-transform">
-          <Menu className="w-3.5 h-3.5" />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-200 group-hover:text-white font-medium">空间要素与卫星</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-        </div>
+        <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-300 group-hover:text-cyan-200 transition-colors" />
       </button>
     );
   }
