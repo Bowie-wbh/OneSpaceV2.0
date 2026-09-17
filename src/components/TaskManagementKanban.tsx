@@ -9,10 +9,15 @@ import {
   ChevronRight,
   ArrowUp,
   ArrowDown,
-  ArrowUpDown
+  ArrowUpDown,
+  Maximize2,
+  X,
+  Sparkles,
+  Eye
 } from 'lucide-react';
 import { Satellite, FlowStepItem } from '../types';
 import { FlowStepsTimeline } from './FlowStepsTimeline';
+import fireLwirPreviewImg from '../assets/3D_1788272998_LWIR_full_preview.jpg';
 
 export interface PlannedTaskItem {
   id: string;
@@ -57,12 +62,72 @@ export const ONBOARD_STAGE_STEP_COUNT = ONBOARD_STAGE_LABELS.length;
 const toFlowSteps = (labels: string[], errorIndex?: number): FlowStepItem[] =>
   labels.map((label, i) => ({ key: label, label, status: i === errorIndex ? 'error' as const : 'success' as const }));
 
-const RESULT_TABS: { key: string; label: string; filterClass: string }[] = [
-  { key: 'l1', label: 'L1数据', filterClass: '' },
-  { key: 'cloud', label: '云检测', filterClass: 'hue-rotate-180 saturate-150' },
-  { key: 'fire', label: '火灾监测', filterClass: 'hue-rotate-[300deg] saturate-200' },
+export interface ResultImageItem {
+  id: string;
+  url: string;
+  title: string;
+  description: string;
+  filterClass?: string;
+}
+
+export interface ResultTabConfig {
+  key: string;
+  label: string;
+  images: ResultImageItem[];
+}
+
+const RESULT_TABS: ResultTabConfig[] = [
+  {
+    key: 'l1a_reg',
+    label: 'L1A（双波段空间配准）',
+    images: [
+      {
+        id: 'l1a-img-1',
+        url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=80',
+        title: 'L1A 双波段空间配准影像（波段1: 可见光全色/多光谱）',
+        description: '可见光通道亚像素级几何纠正与空间重采样，清晰呈现地物纹理与山水轮廓',
+      },
+      {
+        id: 'l1a-img-2',
+        url: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1600&q=80',
+        title: 'L1A 双波段空间配准影像（波段2: 短波红外SWIR）',
+        description: '短波红外通道空间几何纠正与配准重叠区特征比对，消除波段间空间几何畸变',
+      }
+    ]
+  },
+  {
+    key: 'l4_trad',
+    label: 'L4（传统火点检测）',
+    images: [
+      {
+        id: 'l4-trad-1',
+        url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1600&q=80',
+        title: 'L4 传统亮度温差自适应双阈值火点提取成果',
+        description: '基于中长波红外辐射传输物理反演算法与上下文自适应阈值提取的高温热异常判定图',
+        filterClass: 'hue-rotate-180 saturate-150',
+      }
+    ]
+  },
+  {
+    key: 'l4_ai',
+    label: 'L4（深度学习火点检测）',
+    images: [
+      {
+        id: 'l4-ai-1',
+        url: fireLwirPreviewImg,
+        title: 'L4 星载深度学习多尺度热红外火点识别',
+        description: '星载神经网络对长波红外影像进行热点特征提取，精准识别活跃火线与微弱烟羽阴燃区',
+      },
+      {
+        id: 'l4-ai-2',
+        url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1600&q=80',
+        title: 'L4 深度学习火场蔓延边界与置信度热图',
+        description: '多源注意力机制加权的火势蔓延趋势预测与高温置信度火线定位图层',
+        filterClass: 'hue-rotate-[300deg] saturate-200',
+      }
+    ]
+  },
 ];
-const RESULT_IMAGE_URL = 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80';
 
 // 用量统计数据模型（仅统计各环节用量消耗：成像/在轨预处理/在轨推理/数据暂存/数据下传）
 interface UsageMetricItem {
@@ -339,6 +404,94 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({ value, onChange, to
     </div>
   );
 };
+// 单张成果图大图预览与下载弹窗组件
+interface ResultImageModalProps {
+  image: ResultImageItem | null;
+  tabLabel: string;
+  taskId: string;
+  onClose: () => void;
+  downloadSuccess: boolean;
+  onDownload: () => void;
+}
+
+const ResultImageModal: React.FC<ResultImageModalProps> = ({
+  image,
+  tabLabel,
+  taskId,
+  onClose,
+  downloadSuccess,
+  onDownload,
+}) => {
+  if (!image) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-white dark:bg-[#0c101c] border border-slate-200 dark:border-white/[0.12] shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 顶部标题栏与关闭按钮 */}
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between bg-slate-50/80 dark:bg-white/[0.02]">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 dark:bg-sky-500/15 text-blue-600 dark:text-sky-400 border border-blue-200/80 dark:border-sky-500/30">
+              {tabLabel}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onDownload}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer"
+            >
+              {downloadSuccess ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>已下载</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>下载此图</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="关闭 (Esc)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* 中间高清大图展示区 */}
+        <div className="relative flex-1 bg-black flex items-center justify-center min-h-[320px] max-h-[65vh] p-2 overflow-hidden select-none">
+          <img
+            src={image.url}
+            alt={tabLabel}
+            className={`max-w-full max-h-[62vh] object-contain ${image.filterClass || ''}`}
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
+        {/* 底部信息栏 */}
+        <div className="px-4 sm:px-6 py-3 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-end text-xs text-slate-600 dark:text-slate-300">
+          <span className="text-slate-400 dark:text-slate-500 font-mono">
+            任务编号: {taskId}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 interface TaskManagementKanbanProps {
   satellites: Satellite[];
@@ -361,6 +514,10 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
   const [selectedTaskDetail, setSelectedTaskDetail] = useState<PlannedTaskItem | null>(null);
   const [chatCreatedTasks, setChatCreatedTasks] = useState<PlannedTaskItem[]>([]);
   const [selectedResultTab, setSelectedResultTab] = useState<string>(RESULT_TABS[0].key);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+  const [modalImageItem, setModalImageItem] = useState<ResultImageItem | null>(null);
+  const [modalImageTabLabel, setModalImageTabLabel] = useState<string>('');
+  const [modalDownloadSuccess, setModalDownloadSuccess] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [activeCostCategory, setActiveCostCategory] = useState<string | null>(USAGE_METRIC_CATEGORIES[0].key);
   const [taskListPage, setTaskListPage] = useState(1);
@@ -649,6 +806,202 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     () => sortedTasks.slice((taskListPage - 1) * taskListPageSize, taskListPage * taskListPageSize),
     [sortedTasks, taskListPage, taskListPageSize]
   );
+  const handleDownloadPackage = () => {
+    const currentTab = RESULT_TABS.find((t) => t.key === selectedResultTab) || RESULT_TABS[0];
+    const images = currentTab.images;
+    // 触发下载该标签下的全套数据成果文件
+    images.forEach((img, idx) => {
+      setTimeout(() => {
+        const element = document.createElement('a');
+        element.setAttribute('href', img.url);
+        element.setAttribute('download', `OneSpace_${selectedTaskDetail?.id || 'TASK'}_${currentTab.label}_成果包_第${idx + 1}项_${img.title}.jpg`);
+        element.setAttribute('target', '_blank');
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+      }, idx * 200);
+    });
+
+    setDownloadSuccess(true);
+    setTimeout(() => {
+  const handleDownloadSingleModalImage = (img: ResultImageItem, tabLabel: string) => {
+    const element = document.createElement('a');
+    element.setAttribute('href', img.url);
+    element.setAttribute('download', `OneSpace_${selectedTaskDetail?.id || 'TASK'}_${tabLabel}_${img.title}.jpg`);
+    element.setAttribute('target', '_blank');
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    setModalDownloadSuccess(true);
+    setTimeout(() => {
+      setModalDownloadSuccess(false);
+    }, 2500);
+  };
+
+      setDownloadSuccess(false);
+    }, 2500);
+  };
+  const renderResultImageCards = (activeImg: ResultImageItem, currentTab: ResultTabConfig, images: ResultImageItem[], safeIdx: number) => {
+    return (
+      <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-white/[0.1] bg-black group/img">
+        <div 
+          className="relative w-full h-56 sm:h-64 flex items-center justify-center cursor-pointer overflow-hidden bg-slate-950"
+          onClick={() => {
+            setModalImageItem(activeImg);
+            setModalImageTabLabel(currentTab.label);
+          }}
+        >
+          <img
+            src={activeImg.url}
+            alt={activeImg.title}
+            className={`w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105 ${activeImg.filterClass || ''}`}
+            referrerPolicy="no-referrer"
+          />
+          
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center p-3.5 pointer-events-none">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/90 text-white text-xs font-bold backdrop-blur-md shadow-md">
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>点击放大预览</span>
+            </div>
+          </div>
+
+          {images.length > 1 && (
+            <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImageIndex((prev: number) => (prev > 0 ? prev - 1 : images.length - 1));
+                }}
+                className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md transition-colors pointer-events-auto cursor-pointer shadow-md"
+                title="上一张"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImageIndex((prev: number) => (prev < images.length - 1 ? prev + 1 : 0));
+                }}
+                className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md transition-colors pointer-events-auto cursor-pointer shadow-md"
+                title="下一张"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {images.length > 1 && (
+          <div className="px-3 py-2 bg-slate-900/90 dark:bg-[#070b14]/95 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-300 font-medium">
+                第 <strong className="text-sky-400">{safeIdx + 1}</strong> / {images.length} 张图:
+              </span>
+              <div className="flex items-center gap-1.5">
+                {images.map((img, i) => (
+                  <button
+                    key={img.id}
+                    type="button"
+                    onClick={() => setSelectedImageIndex(i)}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                      safeIdx === i
+                        ? 'bg-blue-600 dark:bg-sky-500 text-white shadow-xs'
+                        : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                    }`}
+                  >
+                    图 {i + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  const renderResultDownloadSection = (task: PlannedTaskItem, taskFailed: boolean) => {
+    const isCompleted = onboardStepIndex >= ONBOARD_STAGE_LABELS.length;
+    const currentTab = RESULT_TABS.find((t) => t.key === selectedResultTab) || RESULT_TABS[0];
+    const images = currentTab.images;
+    const safeIdx = selectedImageIndex < images.length ? selectedImageIndex : 0;
+    const activeImg = images[safeIdx] || images[0];
+
+    return (
+      <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.06] bg-slate-50/40 dark:bg-white/[0.02] overflow-hidden mb-1">
+        <div className="px-3.5 sm:px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.06] bg-slate-50/80 dark:bg-white/[0.02] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-4 rounded-full bg-blue-600 dark:bg-sky-500" />
+            <h5 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 font-sans">结果下载</h5>
+          </div>
+          {isCompleted && !taskFailed && (
+            <span className="text-[11px] text-slate-400 font-medium font-sans">
+              点击图片可弹窗放大查看并下载
+            </span>
+          )}
+        </div>
+
+        {taskFailed ? (
+          <div className="p-6 flex items-center justify-center text-xs text-red-500 dark:text-red-400 font-sans">
+            任务已失败，无可用结果
+          </div>
+        ) : !isCompleted ? (
+          <div className="p-6 flex items-center justify-center text-xs text-slate-400 font-sans">
+            星上处理流程尚未完成，结果生成后将在此处展示
+          </div>
+        ) : (
+          <div className="p-3.5 sm:p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {RESULT_TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => {
+                      setSelectedResultTab(tab.key);
+                      setSelectedImageIndex(0);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                      selectedResultTab === tab.key
+                        ? 'bg-blue-50/90 dark:bg-sky-500/15 text-blue-600 dark:text-sky-400 border border-blue-200/90 dark:border-sky-500/30 font-bold shadow-2xs'
+                        : 'bg-slate-100/70 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent font-semibold'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDownloadPackage}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer shrink-0"
+                title="打包下载当前分类成果文件包"
+              >
+                {downloadSuccess ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>已下载</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>下载文件包</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {renderResultImageCards(activeImg, currentTab, images, safeIdx)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
+
   if (selectedTaskDetail) {
     const task = selectedTaskDetail;
     // 实时一轨任务：地面规划先完成再展开星上流程，引导用户按阶段查看进度
@@ -663,6 +1016,7 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     const failAt = taskFailed ? task.failStepIndex : undefined;
     const groundErrorIndex = failAt !== undefined && failAt < GROUND_STAGE_LABELS.length ? failAt : undefined;
     const onboardErrorIndex = failAt !== undefined && failAt >= GROUND_STAGE_LABELS.length ? failAt - GROUND_STAGE_LABELS.length : undefined;
+
     return (
       <div id="task-management-kanban" className="w-full h-full flex flex-col min-h-0 text-left select-none animate-fadeIn overflow-hidden">
         <div className="w-full h-full flex flex-col min-h-0 rounded-2xl bg-white/95 dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/[0.08] shadow-sm backdrop-blur-xl overflow-hidden p-4 sm:p-5 gap-4">
@@ -677,6 +1031,7 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
             </button>
             <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-sans">任务规划详情</h4>
           </div>
+
 
           <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-4">
             {/* 基本信息 */}
@@ -757,77 +1112,7 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
             </div>
 
             {/* 结果下载：星上处理流程全部完成后才呈现结果内容 */}
-            <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.06] bg-slate-50/40 dark:bg-white/[0.02] overflow-hidden mb-1">
-              <div className="px-3.5 sm:px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.06] bg-slate-50/80 dark:bg-white/[0.02] flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-blue-600 dark:bg-sky-500" />
-                <h5 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 font-sans">结果下载</h5>
-              </div>
-              {taskFailed ? (
-                <div className="p-6 flex items-center justify-center text-xs text-red-500 dark:text-red-400 font-sans">
-                  任务已失败，无可用结果
-                </div>
-              ) : onboardStepIndex < ONBOARD_STAGE_LABELS.length ? (
-                <div className="p-6 flex items-center justify-center text-xs text-slate-400 font-sans">
-                  星上处理流程尚未完成，结果生成后将在此处展示
-                </div>
-              ) : (
-              <div className="p-3.5 sm:p-4 space-y-3">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    {RESULT_TABS.map((tab) => (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => setSelectedResultTab(tab.key)}
-                        className={`px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-                          selectedResultTab === tab.key
-                            ? 'bg-blue-50/90 dark:bg-sky-500/15 text-blue-600 dark:text-sky-400 border border-blue-200/90 dark:border-sky-500/30 font-bold shadow-2xs'
-                            : 'bg-slate-100/70 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent font-semibold'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const element = document.createElement('a');
-                      element.setAttribute('href', RESULT_IMAGE_URL);
-                      element.setAttribute('download', `OneSpace_${task.id}_${RESULT_TABS.find((t) => t.key === selectedResultTab)?.label}.jpg`);
-                      element.setAttribute('target', '_blank');
-                      document.body.appendChild(element);
-                      element.click();
-                      document.body.removeChild(element);
-                      setDownloadSuccess(true);
-                      setTimeout(() => setDownloadSuccess(false), 2500);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer shrink-0"
-                  >
-                    {downloadSuccess ? (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>已下载</span>
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-3.5 h-3.5" />
-                        <span>下载</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.1] bg-black max-h-56 sm:max-h-64">
-                  <img
-                    src={RESULT_IMAGE_URL}
-                    alt={RESULT_TABS.find((t) => t.key === selectedResultTab)?.label}
-                    className={`w-full h-full object-cover transition-all ${RESULT_TABS.find((t) => t.key === selectedResultTab)?.filterClass || ''}`}
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              </div>
-              )}
-            </div>
+            {renderResultDownloadSection(task, taskFailed)}
 
             {/* 用量统计：星上处理流程全部完成后才呈现费用构成明细 */}
             <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.06] bg-slate-50/40 dark:bg-white/[0.02] overflow-hidden mb-1">
@@ -852,7 +1137,21 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
           </div>
         </div>
 
+        {/* 单张成果图片大图弹窗 Modal */}
+        <ResultImageModal
+          image={modalImageItem}
+          tabLabel={modalImageTabLabel}
+          taskId={task.id}
+          onClose={() => setModalImageItem(null)}
+          downloadSuccess={modalDownloadSuccess}
+          onDownload={() => {
+            if (modalImageItem) {
+              handleDownloadSingleModalImage(modalImageItem, modalImageTabLabel);
+            }
+          }}
+        />
       </div>
+
     );
   }
 
@@ -1004,8 +1303,9 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
                       onClick={() => {
                         setSelectedTaskDetail(task);
                         setSelectedResultTab(RESULT_TABS[0].key);
+                        setSelectedImageIndex(0);
                         setDownloadSuccess(false);
-                        setActiveCostCategory(USAGE_COST_CATEGORIES[0].key);
+                        setActiveCostCategory(USAGE_METRIC_CATEGORIES[0].key);
                       }}
                       className="hover:bg-blue-50/40 dark:hover:bg-sky-950/20 transition-colors group cursor-pointer"
                     >

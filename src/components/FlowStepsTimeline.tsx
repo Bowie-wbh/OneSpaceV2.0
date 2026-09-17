@@ -6,7 +6,9 @@ import {
   RotateCw,
   ChevronDown,
   ChevronRight,
-  X
+  X,
+  Maximize2,
+  CheckCircle2
 } from 'lucide-react';
 import { FlowStepItem } from '../types';
 
@@ -38,6 +40,8 @@ export const FlowStepsTimeline: React.FC<FlowStepsTimelineProps> = ({
 }) => {
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   const handleDownload = () => {
     setDownloadSuccess(true);
@@ -287,14 +291,90 @@ export const FlowStepsTimeline: React.FC<FlowStepsTimelineProps> = ({
             </button>
           </div>
 
-          {/* 成果图（纯净静态图，无额外遮罩覆盖） */}
-          <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.1] bg-black max-h-56 sm:max-h-64">
+          {/* 成果图（纯净静态图，支持点击放大预览） */}
+          <div 
+            className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.1] bg-black max-h-56 sm:max-h-64 cursor-pointer group/img"
+            onClick={() => setIsModalOpen(true)}
+          >
             <img
               src={resultImage || 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80'}
               alt="遥感成像检测成果"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105"
               referrerPolicy="no-referrer"
             />
+            
+            {/* 悬浮放大提示 */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/90 text-white text-xs font-bold backdrop-blur-md shadow-md">
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>点击放大预览</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 大图弹窗 Modal */}
+      {isModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-white dark:bg-[#0c101c] border border-slate-200 dark:border-white/[0.12] shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between bg-slate-50/80 dark:bg-white/[0.02]">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-blue-600 dark:bg-sky-500" />
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  {targetTitle} 遥感成果影像大图
+                </h3>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer"
+                >
+                  {downloadSuccess ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>已下载</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>下载此图</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white flex items-center justify-center transition-colors cursor-pointer"
+                  title="关闭 (Esc)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="relative flex-1 bg-black flex items-center justify-center min-h-[320px] max-h-[65vh] p-2 overflow-hidden select-none">
+              <img
+                src={resultImage || 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80'}
+                alt="遥感成像检测成果"
+                className="max-w-full max-h-[62vh] object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            <div className="px-4 sm:px-6 py-3 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span>遥感影像已完成下传与在轨算法解译</span>
+              <span className="font-mono">目标: {targetTitle}</span>
+            </div>
           </div>
         </div>
       )}
