@@ -27,6 +27,8 @@ export interface PlannedTaskItem {
   targetLocation?: string;
   taskMode: '一轨成像' | '常规模式';
   payload: string;
+  npuHours?: string; // 算力卡时，如 "0.05h"
+  tokenUsage?: { input: string; output: string }; // Token消耗，如 { input: '182400tokens', output: '38200tokens' }
   // 是否为对话流刚发起的实时任务（决定详情页流程是否需要逐步呈现动画）
   isLive?: boolean;
   // 实时任务的最终结果：成功 或 失败（未结束/中断前为 undefined）
@@ -62,90 +64,83 @@ const RESULT_TABS: { key: string; label: string; filterClass: string }[] = [
 ];
 const RESULT_IMAGE_URL = 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80';
 
-// 用量统计费用类目（成像/在轨预处理/在轨推理/数据暂存/下传各费用构成明细，颜色与系统统一配色体系一致）
-interface UsageCostItem {
-  name: string;
-  formula: string;
-  amount: number;
+// 用量统计数据模型（仅统计各环节用量消耗：成像/在轨预处理/在轨推理/数据暂存/数据下传）
+interface UsageMetricItem {
+  label: string;
+  value: string;
+  unit: string;
 }
-interface UsageCostCategory {
+interface UsageMetricCategory {
   key: string;
   label: string;
-  total: number;
   textClass: string;
   bgClass: string;
-  chipTextClass: string;
-  chipBgClass: string;
-  items: UsageCostItem[];
+  cardBgGradient: string;
+  cardBorderClass: string;
+  items: UsageMetricItem[];
 }
-const USAGE_COST_CATEGORIES: UsageCostCategory[] = [
+const USAGE_METRIC_CATEGORIES: UsageMetricCategory[] = [
   {
     key: 'imaging',
-    label: '成像费',
-    total: 1186.0,
-    textClass: 'text-blue-600 dark:text-sky-400',
-    bgClass: 'bg-blue-600 dark:bg-sky-500',
-    chipTextClass: 'text-blue-600 dark:text-sky-400',
-    chipBgClass: 'bg-blue-50 dark:bg-sky-500/15',
+    label: '成像',
+    textClass: 'text-sky-500 dark:text-sky-400',
+    bgClass: 'bg-sky-500',
+    cardBgGradient: 'bg-sky-500/[0.04] dark:bg-sky-500/[0.06] hover:bg-sky-500/[0.08]',
+    cardBorderClass: 'border-sky-500/20 dark:border-sky-500/30 hover:border-sky-500/40',
     items: [
-      { name: '任务调度费', formula: '1次 × 200.00元/次 × 1', amount: 200.0 },
-      { name: '成像时长费', formula: '240卡·秒 × 2.00元/卡·秒 × 1', amount: 480.0 },
-      { name: '侧摆附加费', formula: '1次 × 500.00元/次 × 1', amount: 500.0 },
-      { name: '原始数据暂存费', formula: '3GB·h × 2.00元/GB·h × 1', amount: 6.0 },
+      { label: '任务调度次数', value: '1', unit: '次' },
+      { label: '侧摆次数', value: '1', unit: '次' },
+      { label: '数据暂存', value: '3', unit: 'GB·h' },
+      { label: '成像时长', value: '240', unit: '卡·秒' },
     ],
   },
   {
     key: 'processing',
-    label: '在轨预处理费',
-    total: 800.0,
-    textClass: 'text-violet-600 dark:text-violet-400',
-    bgClass: 'bg-violet-600 dark:bg-violet-500',
-    chipTextClass: 'text-violet-600 dark:text-violet-400',
-    chipBgClass: 'bg-violet-50 dark:bg-violet-500/15',
+    label: '在轨预处理',
+    textClass: 'text-purple-500 dark:text-purple-400',
+    bgClass: 'bg-purple-500',
+    cardBgGradient: 'bg-purple-500/[0.04] dark:bg-purple-500/[0.06] hover:bg-purple-500/[0.08]',
+    cardBorderClass: 'border-purple-500/20 dark:border-purple-500/30 hover:border-purple-500/40',
     items: [
-      { name: 'NPU卡时费', formula: '0.05卡时 × 8000.00元/卡时 × 复杂度2 × 功耗1', amount: 800.0 },
+      { label: 'GPU卡时', value: '0.05', unit: 'h' },
     ],
   },
   {
     key: 'inference',
-    label: '在轨推理费',
-    total: 0.1715,
-    textClass: 'text-amber-600 dark:text-amber-400',
-    bgClass: 'bg-amber-600 dark:bg-amber-500',
-    chipTextClass: 'text-amber-600 dark:text-amber-400',
-    chipBgClass: 'bg-amber-50 dark:bg-amber-500/15',
+    label: '在轨推理',
+    textClass: 'text-amber-500 dark:text-amber-400',
+    bgClass: 'bg-amber-500',
+    cardBgGradient: 'bg-amber-500/[0.04] dark:bg-amber-500/[0.06] hover:bg-amber-500/[0.08]',
+    cardBorderClass: 'border-amber-500/20 dark:border-amber-500/30 hover:border-amber-500/40',
     items: [
-      { name: '输入token费', formula: '182,400 tokens × 0.50元/百万tokens × 1', amount: 0.076 },
-      { name: '输出token费', formula: '38,200 tokens × 2.50元/百万tokens × 1', amount: 0.0955 },
+      { label: '输入token', value: '182,400', unit: 'tokens' },
+      { label: '输出token', value: '38,200', unit: 'tokens' },
     ],
   },
   {
     key: 'storage',
-    label: '数据暂存费',
-    total: 6.2,
-    textClass: 'text-emerald-600 dark:text-emerald-400',
-    bgClass: 'bg-emerald-600 dark:bg-emerald-500',
-    chipTextClass: 'text-emerald-600 dark:text-emerald-400',
-    chipBgClass: 'bg-emerald-50 dark:bg-emerald-500/15',
+    label: '数据暂存',
+    textClass: 'text-emerald-500 dark:text-emerald-400',
+    bgClass: 'bg-emerald-500',
+    cardBgGradient: 'bg-emerald-500/[0.04] dark:bg-emerald-500/[0.06] hover:bg-emerald-500/[0.08]',
+    cardBorderClass: 'border-emerald-500/20 dark:border-emerald-500/30 hover:border-emerald-500/40',
     items: [
-      { name: '热存储费', formula: '1GB·h × 5.00元/GB·h × 1', amount: 5.0 },
-      { name: '温存储费', formula: '0.6GB·h × 2.00元/GB·h × 1', amount: 1.2 },
+      { label: '热存储', value: '1', unit: 'GB·h' },
+      { label: '温存储', value: '0.6', unit: 'GB·h' },
     ],
   },
   {
     key: 'downlink',
-    label: '下传费',
-    total: 82.5,
-    textClass: 'text-orange-600 dark:text-orange-400',
-    bgClass: 'bg-orange-600 dark:bg-orange-500',
-    chipTextClass: 'text-orange-600 dark:text-orange-400',
-    chipBgClass: 'bg-orange-50 dark:bg-orange-500/15',
+    label: '数据下传',
+    textClass: 'text-orange-500 dark:text-orange-400',
+    bgClass: 'bg-orange-500',
+    cardBgGradient: 'bg-orange-500/[0.04] dark:bg-orange-500/[0.06] hover:bg-orange-500/[0.08]',
+    cardBorderClass: 'border-orange-500/20 dark:border-orange-500/30 hover:border-orange-500/40',
     items: [
-      { name: '下传费', formula: '0.55GB × 1500.00元/GB × 1', amount: 82.5 },
+      { label: '下传数据量', value: '0.55', unit: 'GB' },
     ],
   },
 ];
-const USAGE_COST_TOTAL = USAGE_COST_CATEGORIES.reduce((sum, cat) => sum + cat.total, 0);
 
 // ── 自定义日期选择器组件（严格统一系统 UI 设计与暗色/亮色配色） ───────────────
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -367,7 +362,7 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
   const [chatCreatedTasks, setChatCreatedTasks] = useState<PlannedTaskItem[]>([]);
   const [selectedResultTab, setSelectedResultTab] = useState<string>(RESULT_TABS[0].key);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [activeCostCategory, setActiveCostCategory] = useState<string | null>(USAGE_COST_CATEGORIES[0].key);
+  const [activeCostCategory, setActiveCostCategory] = useState<string | null>(USAGE_METRIC_CATEGORIES[0].key);
   const [taskListPage, setTaskListPage] = useState(1);
   const TASK_LIST_PAGE_SIZE_OPTIONS = [10, 20, 50];
   const [taskListPageSize, setTaskListPageSize] = useState(TASK_LIST_PAGE_SIZE_OPTIONS[0]);
@@ -392,6 +387,8 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
       targetLocation: '大兴安岭（124.3°E, 50.2°N）',
       taskMode: '一轨成像',
       payload: '红外',
+      npuHours: '0.05h',
+      tokenUsage: { input: '182400tokens', output: '38200tokens' },
     },
     {
       id: 'TASK-PL-20260904-02',
@@ -406,6 +403,8 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
       targetLocation: '塔里木盆地（82.6°E, 40.5°N）',
       taskMode: '一轨成像',
       payload: '可见光/热红外',
+      npuHours: '0.04h',
+      tokenUsage: { input: '146000tokens', output: '29800tokens' },
     },
     {
       id: 'TASK-PL-20260904-03',
@@ -420,6 +419,8 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
       targetLocation: '南海（112.3°E, 15.8°N）',
       taskMode: '一轨成像',
       payload: 'SAR',
+      npuHours: '0.00h',
+      tokenUsage: { input: '0tokens', output: '0tokens' },
     },
     {
       id: 'TASK-PL-20260904-04',
@@ -434,6 +435,8 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
       targetLocation: '密云（116.8°E, 40.4°N）',
       taskMode: '常规模式',
       payload: '星务遥测',
+      npuHours: '0.00h',
+      tokenUsage: { input: '0tokens', output: '0tokens' },
     },
     {
       id: 'TASK-PL-20260904-05',
@@ -448,6 +451,8 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
       targetLocation: '北京（116.4°E, 39.9°N）',
       taskMode: '一轨成像',
       payload: '红外',
+      npuHours: '0.06h',
+      tokenUsage: { input: '210500tokens', output: '45600tokens' },
     },
   ];
 
@@ -523,6 +528,67 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
 
     return () => clearInterval(timer);
   }, [selectedTaskDetail]);
+  // 渲染单个用量卡片块
+  const renderMetricCard = (cat: typeof USAGE_METRIC_CATEGORIES[0], colsClass: string = 'grid-cols-2') => {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-200/60 dark:border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <span className={`w-1.5 h-4 rounded-full ${cat.bgClass}`} />
+            <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 font-sans">{cat.label}</span>
+          </div>
+          <span className="text-[11px] text-slate-400 font-sans">{cat.items.length} 项指标</span>
+        </div>
+        <div className={`grid ${colsClass} gap-2.5`}>
+          {cat.items.map((item, i) => (
+            <div
+              key={i}
+              className={`flex flex-col justify-between p-3 rounded-xl border shadow-xs transition-all duration-200 ${cat.cardBgGradient} ${cat.cardBorderClass}`}
+            >
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-sans truncate">{item.label}</span>
+              <div className="flex items-baseline gap-1 mt-2.5">
+                <span className="font-sans font-black text-lg sm:text-xl text-slate-900 dark:text-white leading-none tracking-tight">
+                  {item.value}
+                </span>
+                <span className={`text-[11px] font-bold font-sans ${cat.textClass}`}>
+                  {item.unit}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // 渲染用量统计指标卡片
+  const renderUsageMetricsCards = () => {
+    const catImaging = USAGE_METRIC_CATEGORIES[0];
+    const catProc = USAGE_METRIC_CATEGORIES[1];
+    const catInfer = USAGE_METRIC_CATEGORIES[2];
+    const catStorage = USAGE_METRIC_CATEGORIES[3];
+    const catDown = USAGE_METRIC_CATEGORIES[4];
+
+    return (
+      <div className="space-y-4">
+        {/* 1. 成像（4项指标横向排布） */}
+        {renderMetricCard(catImaging, 'grid-cols-2 sm:grid-cols-4')}
+
+        {/* 2. 在轨预处理 & 在轨推理（并排一行） */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {renderMetricCard(catProc, 'grid-cols-1')}
+          {renderMetricCard(catInfer, 'grid-cols-2')}
+        </div>
+
+        {/* 3. 数据暂存 & 数据下传（并排一行） */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {renderMetricCard(catStorage, 'grid-cols-2')}
+          {renderMetricCard(catDown, 'grid-cols-1')}
+        </div>
+      </div>
+    );
+  };
+
 
   const totalSatellites = satellites.length;
 
@@ -633,12 +699,16 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
                   <span className="font-bold text-blue-600 dark:text-sky-400 truncate">{task.taskMode}</span>
                 </div>
                 <div className="flex items-baseline gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-[#121829] border border-slate-100 dark:border-white/[0.04]">
-                  <span className="text-slate-400 shrink-0">是否成像</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400 truncate">{task.isImaging ? '成像' : '非成像'}</span>
+                  <span className="text-slate-400 shrink-0">算力卡时</span>
+                  <span className="font-mono font-bold text-violet-600 dark:text-violet-400 truncate">
+                    {task.npuHours ?? (task.computingTask && task.computingTask !== '无' ? '0.05h' : '0.00h')}
+                  </span>
                 </div>
                 <div className="flex items-baseline gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-[#121829] border border-slate-100 dark:border-white/[0.04]">
-                  <span className="text-slate-400 shrink-0">计算任务</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{task.computingTask}</span>
+                  <span className="text-slate-400 shrink-0">Token消耗</span>
+                  <span className="font-mono font-medium text-slate-800 dark:text-slate-200 truncate text-[11px]">
+                    入:{task.tokenUsage?.input ?? (task.computingTask && task.computingTask !== '无' ? '182400' : '0')} / 出:{task.tokenUsage?.output ?? (task.computingTask && task.computingTask !== '无' ? '38200' : '0')}
+                  </span>
                 </div>
                 <div className="flex items-baseline gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-[#121829] border border-slate-100 dark:border-white/[0.04]">
                   <span className="text-slate-400 shrink-0">单星/多星</span>
@@ -774,115 +844,8 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
                   星上处理流程尚未完成，用量统计生成后将在此处展示
                 </div>
               ) : (
-              <div className="p-3.5 sm:p-4 space-y-3.5">
-                {/* 费用构成占比 */}
-                <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#121829] p-3 sm:p-3.5">
-                  <div className="flex items-end justify-between mb-3">
-                    <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 font-sans">费用构成</span>
-                    <div className="text-right leading-none">
-                      <span className="text-[10px] text-slate-400 mr-1.5 font-sans">总费用</span>
-                      <span className="font-bold text-sm sm:text-base text-blue-600 dark:text-sky-400 tabular-nums">
-                        ¥{USAGE_COST_TOTAL.toLocaleString('zh-CN', { minimumFractionDigits: 4 })}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex h-2 rounded-full overflow-hidden gap-0.5 mb-3.5 bg-slate-100 dark:bg-white/[0.04]">
-                    {USAGE_COST_CATEGORIES.map((cat) => {
-                      const pct = (cat.total / USAGE_COST_TOTAL) * 100;
-                      return (
-                        <div
-                          key={cat.key}
-                          className={`${cat.bgClass} rounded-full`}
-                          style={{ width: `${pct}%`, minWidth: pct > 0.05 ? '3px' : 0 }}
-                          title={`${cat.label} ¥${cat.total.toFixed(4)}`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
-                    {USAGE_COST_CATEGORIES.map((cat) => {
-                      const pct = (cat.total / USAGE_COST_TOTAL) * 100;
-                      return (
-                        <div key={cat.key} className="flex items-center gap-2 min-w-0">
-                          <span className={`w-1 h-7 rounded-full flex-shrink-0 ${cat.bgClass}`} />
-                          <div className="min-w-0">
-                            <div className="flex items-baseline gap-1.5">
-                              <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-sans">{cat.label}</span>
-                              <span className={`text-[10px] font-bold tabular-nums ${cat.textClass}`}>{pct.toFixed(1)}%</span>
-                            </div>
-                            <div className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 tabular-nums leading-tight">
-                              ¥{cat.total.toFixed(4)}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 费用明细：按类目展开查看计费公式 */}
-                <div className="space-y-2">
-                  {USAGE_COST_CATEGORIES.map((cat) => {
-                    const isActive = activeCostCategory === cat.key;
-                    return (
-                      <div
-                        key={cat.key}
-                        onClick={() => setActiveCostCategory((prev) => (prev === cat.key ? null : cat.key))}
-                        className={`rounded-xl border overflow-hidden transition-all cursor-pointer ${
-                          isActive
-                            ? 'bg-white dark:bg-[#121829] border-slate-200 dark:border-white/[0.1]'
-                            : 'bg-white/70 dark:bg-white/[0.015] border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 dark:hover:border-white/[0.12]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between px-3.5 py-2.5">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className={`w-1.5 h-5 rounded-full flex-shrink-0 ${cat.bgClass}`} />
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-sans truncate">{cat.label}</span>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${cat.chipBgClass} ${cat.chipTextClass}`}>
-                              {cat.items.length} 项
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            <span className={`text-xs sm:text-sm font-bold tabular-nums ${cat.textClass}`}>¥{cat.total.toFixed(4)}</span>
-                            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isActive ? 'rotate-180' : ''}`} />
-                          </div>
-                        </div>
-
-                        {isActive && (
-                          <div
-                            className="border-t border-slate-100 dark:border-white/[0.06] divide-y divide-slate-100 dark:divide-white/[0.04]"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {cat.items.map((item, i) => (
-                              <div key={i} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                                <span className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 font-sans shrink-0">
-                                  {item.name}
-                                </span>
-                                <div className="flex items-center gap-1 flex-wrap justify-end min-w-0">
-                                  {item.formula.split('×').map((part, pi, arr) => (
-                                    <span key={pi} className="flex items-center gap-1">
-                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.05] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                        {part.trim()}
-                                      </span>
-                                      {pi < arr.length - 1 && <span className="text-[10px] text-slate-300 dark:text-slate-600">×</span>}
-                                    </span>
-                                  ))}
-                                </div>
-                                <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 tabular-nums shrink-0 min-w-[5rem] text-right">
-                                  ¥{item.amount.toFixed(4)}
-                                </span>
-                              </div>
-                            ))}
-                            <div className="flex items-center justify-between px-3.5 py-2">
-                              <span className="text-[10px] text-slate-400 font-sans">小计</span>
-                              <span className={`text-xs font-bold tabular-nums ${cat.textClass}`}>¥{cat.total.toFixed(4)}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="p-3.5 sm:p-4 space-y-4">
+                {renderUsageMetricsCards()}
               </div>
               )}
             </div>
@@ -1024,69 +987,68 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
                       {timeSortOrder === 'desc' && <ArrowDown size={12} />}
                     </button>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">是否成像</th>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">是否计算</th>
                   <th className="py-2.5 px-3 font-semibold whitespace-nowrap">单星/多星</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">算力卡时</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Token消耗</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
-                {pagedTasks.map((task) => (
-                  <tr
-                    key={task.id}
-                    onClick={() => {
-                      setSelectedTaskDetail(task);
-                      setSelectedResultTab(RESULT_TABS[0].key);
-                      setDownloadSuccess(false);
-                      setActiveCostCategory(USAGE_COST_CATEGORIES[0].key);
-                    }}
-                    className="hover:bg-blue-50/40 dark:hover:bg-sky-950/20 transition-colors group cursor-pointer"
-                  >
-                    <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-500 dark:text-slate-400 font-sans">
-                      {task.id}
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <div>
-                        <div className="font-bold text-slate-800 dark:text-slate-100 font-sans">{task.satelliteName}</div>
-                        <div className="text-[11px] text-slate-400 font-sans">{task.satelliteCode}</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300 font-sans">
-                      <div className="font-bold text-slate-800 dark:text-slate-100">{task.groundStation.split(' ')[0]}</div>
-                      <div className="text-[11px] text-slate-400">{task.groundStation.split(' ').slice(1).join(' ')}</div>
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap font-sans font-medium text-slate-700 dark:text-slate-300">
-                      <div className="font-bold text-slate-800 dark:text-slate-100">{task.timeRange.split(' ')[0]}</div>
-                      <div className="text-[11px] text-slate-400">{task.timeRange.split(' ').slice(1).join(' ')}</div>
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      {task.isImaging ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-500/30 text-[11px] font-bold font-sans">
-                          <span>是</span>
+                {pagedTasks.map((task) => {
+                  const npuDisplay = task.npuHours ?? (task.computingTask && task.computingTask !== '无' ? '0.05h' : '0.00h');
+                  const tokenInput = task.tokenUsage?.input ?? (task.computingTask && task.computingTask !== '无' ? '182400tokens' : '0tokens');
+                  const tokenOutput = task.tokenUsage?.output ?? (task.computingTask && task.computingTask !== '无' ? '38200tokens' : '0tokens');
+
+                  return (
+                    <tr
+                      key={task.id}
+                      onClick={() => {
+                        setSelectedTaskDetail(task);
+                        setSelectedResultTab(RESULT_TABS[0].key);
+                        setDownloadSuccess(false);
+                        setActiveCostCategory(USAGE_COST_CATEGORIES[0].key);
+                      }}
+                      className="hover:bg-blue-50/40 dark:hover:bg-sky-950/20 transition-colors group cursor-pointer"
+                    >
+                      <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-500 dark:text-slate-400 font-sans">
+                        {task.id}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <div>
+                          <div className="font-bold text-slate-800 dark:text-slate-100 font-sans">{task.satelliteName}</div>
+                          <div className="text-[11px] text-slate-400 font-sans">{task.satelliteCode}</div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300 font-sans">
+                        <div className="font-bold text-slate-800 dark:text-slate-100">{task.groundStation.split(' ')[0]}</div>
+                        <div className="text-[11px] text-slate-400">{task.groundStation.split(' ').slice(1).join(' ')}</div>
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap font-sans font-medium text-slate-700 dark:text-slate-300">
+                        <div className="font-bold text-slate-800 dark:text-slate-100">{task.timeRange.split(' ')[0]}</div>
+                        <div className="text-[11px] text-slate-400">{task.timeRange.split(' ').slice(1).join(' ')}</div>
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border font-sans ${task.starMode === '多星协同' ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-500/30' : 'bg-blue-50 dark:bg-sky-500/15 text-blue-700 dark:text-sky-300 border-blue-200/60 dark:border-sky-500/30'}`}>
+                          {task.starMode === '多星协同' ? '多星' : task.starMode}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/[0.08] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.1] text-[11px] font-medium font-sans">
-                          <span>否</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      {task.computingTask && task.computingTask !== '无' ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-500/30 text-[11px] font-bold font-sans">
-                          <span>是</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/[0.08] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.1] text-[11px] font-medium font-sans">
-                          <span>否</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border font-sans ${task.starMode === '多星协同' ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-500/30' : 'bg-blue-50 dark:bg-sky-500/15 text-blue-700 dark:text-sky-300 border-blue-200/60 dark:border-sky-500/30'}`}>
-                        {task.starMode === '多星协同' ? '多星' : task.starMode}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap font-sans font-medium text-slate-700 dark:text-slate-300">
+                        {npuDisplay}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap font-sans text-xs">
+                        <div className="space-y-0.5 font-mono">
+                          <div className="text-slate-600 dark:text-slate-300 text-[11px]">
+                            <span className="text-slate-400 font-sans">输入：</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">{tokenInput}</span>
+                          </div>
+                          <div className="text-slate-600 dark:text-slate-300 text-[11px]">
+                            <span className="text-slate-400 font-sans">输出：</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">{tokenOutput}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
