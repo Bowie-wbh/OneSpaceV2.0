@@ -435,6 +435,224 @@ export const BUILDING_DATA_TYPES: RemoteSensingDataTypeBranch[] = [
     ],
   },
 ];
+// ── 空间遥感与计算卫星星座定义 (12 颗计算星 + SCS-04-16，真实 TLE 惯性坐标动力学解算) ──
+export interface ConstellationSatelliteItem {
+  id: string;
+  code: string;
+  name: string;
+  noradId: string;
+  line1: string;
+  line2: string;
+  payload: {
+    aiCompute: string;
+    routeSpeed: string;
+    laserSpeed: string;
+    infraredResolution: string;
+  };
+  models: { name: string; version: string }[];
+  dataStats: { sceneCount: number; sizeGB: number };
+  usage: { gpu: number; cpu: number; disk: number };
+}
+
+export const SATELLITE_CONSTELLATION_ITEMS: ConstellationSatelliteItem[] = [
+  {
+    id: 'scs-01-01',
+    code: 'SCS-01-01',
+    name: '01计算星',
+    noradId: '63981',
+    line1: '1 63981U 25100A   26064.24611520  .00021542  00000-0  96234-3 0  9995',
+    line2: '2 63981  97.3752 139.3524 0009512 318.4521  41.5832 15.20705124 44821',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '轻量化目标检测', version: 'v3.5.0' },
+      { name: '云判与去雾模型', version: 'v2.1.2' },
+    ],
+    dataStats: { sceneCount: 142, sizeGB: 388.5 },
+    usage: { gpu: 64, cpu: 42, disk: 55 },
+  },
+  {
+    id: 'scs-01-02',
+    code: 'SCS-01-02',
+    name: '02计算星',
+    noradId: '63982',
+    line1: '1 63982U 25100E   26064.24685120  .00020815  00000-0  94512-3 0  9998',
+    line2: '2 63982  97.3735 139.3245 0009241 322.1845  37.8521 15.20691245 44828',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '智能热源解译', version: 'v4.0.1' },
+      { name: '正射几何校正', version: 'v1.8.0' },
+    ],
+    dataStats: { sceneCount: 126, sizeGB: 329.4 },
+    usage: { gpu: 58, cpu: 39, disk: 48 },
+  },
+  {
+    id: 'scs-01-03',
+    code: 'SCS-01-03',
+    name: '03计算星',
+    noradId: '63984',
+    line1: '1 63984U 25100C   26064.25142100  .00021894  00000-0  97851-3 0  9992',
+    line2: '2 63984  97.3761 140.1254 0010521 312.6582  47.3851 15.22514285 44874',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '林火应急识别', version: 'v3.2.0' },
+      { name: '高分辨率分割', version: 'v2.0.4' },
+    ],
+    dataStats: { sceneCount: 118, sizeGB: 310.2 },
+    usage: { gpu: 61, cpu: 44, disk: 52 },
+  },
+  {
+    id: 'scs-01-04',
+    code: 'SCS-01-04',
+    name: '04计算星',
+    noradId: '63988',
+    line1: '1 63988U 25100G   26064.24707416  .00020428  00000-0  93048-3 0  9994',
+    line2: '2 63988  97.3774 140.6647 0011742 316.9302  43.1017 15.25556921 44915',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '火点快速聚类', version: 'v2.8.4' },
+      { name: '多谱段融合模型', version: 'v1.6.0' },
+    ],
+    dataStats: { sceneCount: 135, sizeGB: 362.1 },
+    usage: { gpu: 70, cpu: 48, disk: 62 },
+  },
+  {
+    id: 'scs-01-05',
+    code: 'SCS-01-05',
+    name: '05计算星',
+    noradId: '63992',
+    line1: '1 63992U 25100L   26064.24522188  .00022641  00000-0  10288-2 0  9993',
+    line2: '2 63992  97.3744 139.4188 0009838 302.6179  57.4106 15.20726064 44818',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '水体与植被分类', version: 'v3.1.0' },
+      { name: '边缘智能过滤', version: 'v2.3.1' },
+    ],
+    dataStats: { sceneCount: 104, sizeGB: 275.8 },
+    usage: { gpu: 49, cpu: 36, disk: 43 },
+  },
+  {
+    id: 'scs-01-06',
+    code: 'SCS-01-06',
+    name: '06计算星',
+    noradId: '63991',
+    line1: '1 63991U 25100K   26064.24482161  .00022392  00000-0  10187-2 0  9999',
+    line2: '2 63991  97.3715 139.3067 0009951 330.1217  29.9449 15.20684463 44826',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: 'SAR成像去噪', version: 'v1.9.4' },
+      { name: '形变反演解算', version: 'v2.2.0' },
+    ],
+    dataStats: { sceneCount: 112, sizeGB: 298.0 },
+    usage: { gpu: 54, cpu: 40, disk: 46 },
+  },
+  {
+    id: 'scs-01-07',
+    code: 'SCS-01-07',
+    name: '07计算星',
+    noradId: '63983',
+    line1: '1 63983U 25100B   26064.27476028  .00031702  00000-0  99745-3 0  9991',
+    line2: '2 63983  97.3721 141.2842 0008820 307.0714  52.9721 15.32853313 44965',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '红外火情极速检测', version: 'v4.1.0' },
+      { name: '地面站协同分发', version: 'v1.4.2' },
+    ],
+    dataStats: { sceneCount: 148, sizeGB: 412.3 },
+    usage: { gpu: 72, cpu: 51, disk: 66 },
+  },
+  {
+    id: 'scs-01-08',
+    code: 'SCS-01-08',
+    name: '08计算星',
+    noradId: '63987',
+    line1: '1 63987U 25100F   26064.24707416  .00020428  00000-0  93048-3 0  9993',
+    line2: '2 63987  97.3716 139.3022 0009052 315.7362  44.3148 15.20670090 44834',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '多源要素重构', version: 'v2.5.0' },
+      { name: '夜光与热红外协同', version: 'v1.7.1' },
+    ],
+    dataStats: { sceneCount: 122, sizeGB: 320.5 },
+    usage: { gpu: 56, cpu: 37, disk: 47 },
+  },
+  {
+    id: 'scs-01-09',
+    code: 'SCS-01-09',
+    name: '09计算星',
+    noradId: '63990',
+    line1: '1 63990U 25100J   26064.16800794  .00039440  00000-0  12806-2 0  9997',
+    line2: '2 63990  97.3706 140.7408 0006228 300.1851  59.8774 15.31813665 44907',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '古建筑形变监测', version: 'v3.0.2' },
+      { name: 'InSAR相位解缠', version: 'v2.6.4' },
+    ],
+    dataStats: { sceneCount: 156, sizeGB: 435.0 },
+    usage: { gpu: 76, cpu: 53, disk: 70 },
+  },
+  {
+    id: 'scs-01-10',
+    code: 'SCS-01-10',
+    name: '10计算星',
+    noradId: '63993',
+    line1: '1 63993U 25100M   26064.15907400  .00043505  00000-0  13858-2 0  9996',
+    line2: '2 63993  97.3739 140.8797 0007942 315.6969  44.3637 15.32395963 44918',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '全天候火灾预警', version: 'v3.8.0' },
+      { name: '高光谱特征提取', version: 'v2.1.0' },
+    ],
+    dataStats: { sceneCount: 160, sizeGB: 448.2 },
+    usage: { gpu: 78, cpu: 55, disk: 72 },
+  },
+  {
+    id: 'scs-01-11',
+    code: 'SCS-01-11',
+    name: '11计算星',
+    noradId: '63989',
+    line1: '1 63989U 25100H   26064.13705862  .00040698  00000-0  13104-2 0  9991',
+    line2: '2 63989  97.3763 140.9965 0007302 302.8449  57.2089 15.32070645 44921',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '时序遥感超分辨率', version: 'v3.4.1' },
+      { name: '极速目标提取', version: 'v2.0.0' },
+    ],
+    dataStats: { sceneCount: 145, sizeGB: 395.7 },
+    usage: { gpu: 69, cpu: 46, disk: 59 },
+  },
+  {
+    id: 'scs-01-12',
+    code: 'SCS-01-12',
+    name: '12计算星',
+    noradId: '63985',
+    line1: '1 63985U 25100D   26064.18334074  .00014969  00000-0  48123-3 0  9997',
+    line2: '2 63985  97.3743 140.8584 0005924 293.4556  66.6063 15.32340018 44923',
+    payload: { aiCompute: '256 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '100 m' },
+    models: [
+      { name: '多源灾害综合分析', version: 'v3.6.0' },
+      { name: '高通量数据落盘', version: 'v2.4.5' },
+    ],
+    dataStats: { sceneCount: 150, sizeGB: 418.6 },
+    usage: { gpu: 71, cpu: 49, disk: 64 },
+  },
+  {
+    id: 'scs-04-16',
+    code: 'SCS-04-16',
+    name: '云尖沐曦号',
+    noradId: 'SCS-04-16',
+    line1: '1 A0146U 26170D   26258.45368718  .00001470  00000-0  10013-3 0  9992',
+    line2: '2 A0146  97.5574 264.3793 0016697  96.5992 263.7138 15.07721651  8062',
+    payload: { aiCompute: '248 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '120 m' },
+    models: [
+      { name: '云检测模型', version: 'v3.2.1' },
+      { name: '火灾检测模型', version: 'v2.8.0' },
+      { name: '几何校正模型', version: 'v1.5.4' },
+    ],
+    dataStats: { sceneCount: 128, sizeGB: 342.6 },
+    usage: { gpu: 68, cpu: 45, disk: 57 },
+  },
+];
+
 
 // 空间要素标绘：火点检测 (红色小圆点) 与 建筑群 (棕色小圆点)
 export const SPATIAL_MARKER_POINTS: SpatialMarkerPoint[] = [

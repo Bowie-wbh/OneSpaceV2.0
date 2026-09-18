@@ -7,7 +7,15 @@ import { PointMindMapOverlay } from './earthDemo/PointMindMapOverlay';
 import { HistoryDataDrawer } from './earthDemo/HistoryDataDrawer';
 import { RecordDetailModal } from './earthDemo/RecordDetailModal';
 import { DataTypeCategory, HistoryRecord } from '../types/earthDemoTypes';
-import { EARTH_OBJECTS, EarthObject, SPATIAL_MARKER_POINTS, SpatialMarkerPoint, smoothClosedRing } from '../data/mockRemoteSensingData';
+import { 
+  EARTH_OBJECTS, 
+  EarthObject, 
+  SPATIAL_MARKER_POINTS, 
+  SpatialMarkerPoint, 
+  smoothClosedRing,
+  SATELLITE_CONSTELLATION_ITEMS,
+  ConstellationSatelliteItem,
+} from '../data/mockRemoteSensingData';
 import * as satellite from 'satellite.js';
 
 import L from 'leaflet';
@@ -315,23 +323,22 @@ function MapPointScreenTracker({
 const SCS0416_TLE_LINE1 = '1 A0146U 26170D   26258.45368718  .00001470  00000-0  10013-3 0  9992';
 const SCS0416_TLE_LINE2 = '2 A0146  97.5574 264.3793 0016697  96.5992 263.7138 15.07721651  8062';
 
-// 依据真实 SGP4 轨道动力学模型计算 SCS-04-16 的 2D 地面轨迹航带折线段
-function calculateSCS0416GroundTrack(): [number, number][][] {
+// 依据真实 SGP4 轨道动力学模型计算 SCS-04-16 在地心惯性坐标系（ECI）在当前瞬间参考系下的 2D 投影折线段
+function calculateSCS0416GroundTrack(currentTime = new Date()): [number, number][][] {
   const satrec = satellite.twoline2satrec(SCS0416_TLE_LINE1, SCS0416_TLE_LINE2);
   const meanMotionRevPerDay = satrec.no * (1440 / (2 * Math.PI));
   const orbitalPeriodMinutes = 1440 / meanMotionRevPerDay;
   const sampleCount = 360;
-  const epoch = new Date();
+  const gmst = satellite.gstime(currentTime);
 
   const segments: [number, number][][] = [];
   let currentSegment: [number, number][] = [];
   let prevLng: number | null = null;
 
   for (let i = 0; i <= sampleCount; i++) {
-    const t = new Date(epoch.getTime() + (i / sampleCount) * orbitalPeriodMinutes * 60000);
+    const t = new Date(currentTime.getTime() + (i / sampleCount) * orbitalPeriodMinutes * 60000);
     const pv = satellite.propagate(satrec, t);
     if (!pv.position || typeof pv.position === 'boolean') continue;
-    const gmst = satellite.gstime(t);
     const geodetic = satellite.eciToGeodetic(pv.position, gmst);
     const lng = satellite.degreesLong(geodetic.longitude);
     const lat = satellite.degreesLat(geodetic.latitude);
@@ -355,14 +362,13 @@ function calculateSCS0416GroundTrack(): [number, number][][] {
   return segments;
 }
 
-// 依据实时时钟计算 SCS-04-16 当前星下点实时经纬度
-function getSCS0416CurrentPosition(): { lat: number; lng: number } {
+// 依据实时时钟计算 SCS-04-16 当前惯性坐标星位经纬度
+function getSCS0416CurrentPosition(currentTime = new Date()): { lat: number; lng: number } {
   try {
     const satrec = satellite.twoline2satrec(SCS0416_TLE_LINE1, SCS0416_TLE_LINE2);
-    const now = new Date();
-    const pv = satellite.propagate(satrec, now);
+    const pv = satellite.propagate(satrec, currentTime);
     if (pv.position && typeof pv.position !== 'boolean') {
-      const gmst = satellite.gstime(now);
+      const gmst = satellite.gstime(currentTime);
       const geodetic = satellite.eciToGeodetic(pv.position, gmst);
       return {
         lat: satellite.degreesLat(geodetic.latitude),
@@ -2617,6 +2623,16 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
   const [isDaylight2D, setIsDaylight2D] = useState<boolean>(true);
   const [resetNorthTrigger2D, setResetNorthTrigger2D] = useState<number>(0);
 
+  // 2D 视图下的实时时钟驱动（每秒更新一次 2D 卫星位置与当前惯性参考系下的轨道投影）
+  const [currentSatClock, setCurrentSatClock] = useState<Date>(() => new Date());
+  useEffect(() => {
+    if (viewDimension !== '2d') return;
+    const timer = setInterval(() => {
+      setCurrentSatClock(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [viewDimension]);
+
   // 3D 地球镜头飞抵拉近
   const handleFenghuangArrive = useCallback(() => {
     setIsFocusedOnFenghuang(true);
@@ -3068,8 +3084,8 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                 onScreenPositionChange={setPointScreenPos}
               />
 
-              {/* 2D 视图下的 SCS-04-16 真实动力学轨道折线 (基于 TLE 解算) */}
-              {calculateSCS0416GroundTrack().map((segment, sIdx) => (
+              {/* 2D 视图下的 SCS-04-16 惯性参考系 (ECI) 实时动力学轨道投影折线 */}
+              {calculateSCS0416GroundTrack(currentSatClock).map((segment, sIdx) => (
                 <Polyline
                   key={`scs-track-seg-${sIdx}`}
                   positions={segment}
@@ -3082,9 +3098,9 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                 />
               ))}
 
-              {/* 2D 视图下的 SCS-04-16 实时位置 Marker */}
+              {/* 2D 视图下的 SCS-04-16 惯性参考系实时位置 Marker */}
               {(() => {
-                const satPos = getSCS0416CurrentPosition();
+                const satPos = getSCS0416CurrentPosition(currentSatClock);
                 return (
                   <Marker
                     position={[satPos.lat, satPos.lng]}

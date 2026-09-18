@@ -8,7 +8,9 @@ import {
   SPATIAL_MARKER_POINTS,
   SpatialMarkerPoint,
   MarkerType,
-  smoothClosedRing
+  smoothClosedRing,
+  SATELLITE_CONSTELLATION_ITEMS,
+  ConstellationSatelliteItem,
 } from '../../data/mockRemoteSensingData';
 import { HistoryRecord } from '../../types/earthDemoTypes';
 import { 
@@ -22,11 +24,6 @@ import {
 } from 'lucide-react';
 
 declare const Cesium: any;
-
-// 卫星编号与 TLE 轨道根数 (SCS-04-16)
-const SATELLITE_NORAD_ID = 'SCS-04-16';
-const SATELLITE_TLE_LINE1 = '1 A0146U 26170D   26258.45368718  .00001470  00000-0  10013-3 0  9992';
-const SATELLITE_TLE_LINE2 = '2 A0146  97.5574 264.3793 0016697  96.5992 263.7138 15.07721651  8062';
 
 // 生成简洁火点小圆点 Canvas (与 2D 视图配色/选中态完全一致：圆点尺寸恒定，选中态仅叠加光圈与发光)
 const createFireMarkerCanvas = (isSelected = false): string => {
@@ -220,6 +217,7 @@ interface CesiumGlobeProps {
   viewDimension?: '3d' | '2d';
   onToggleDimension?: () => void;
   onSelectSatellite?: (code: string) => void;
+  selectedSatelliteId?: string | null;
 }
 
 export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
@@ -240,6 +238,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
   viewDimension = '3d',
   onToggleDimension,
   onSelectSatellite,
+  selectedSatelliteId = 'scs-04-16',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
@@ -254,23 +253,22 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
   const buildingNormalUrlRef = useRef<string>('');
   const buildingSelectedUrlRef = useRef<string>('');
 
-  // 卫星图标引用与实体引用 (普通与高亮选中状态)
+  // 卫星图标引用与实体集合引用 (支持全星座 12 颗计算星 + SCS-04-16)
   const satelliteNormalUrlRef = useRef<string>('');
   const satelliteSelectedUrlRef = useRef<string>('');
-  const satelliteEntityRef = useRef<any>(null);
-  const satelliteOrbitEntityRef = useRef<any>(null);
-  const satelliteSatrecRef = useRef<any>(null);
+  const satelliteEntitiesRef = useRef<{ id: string; code: string; entity: any; orbitEntity: any }[]>([]);
 
   const [cesiumReady, setCesiumReady] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [cameraAltitude, setCameraAltitude] = useState<string>('18,000 km');
   const [isDaylight, setIsDaylight] = useState<boolean>(true);
-  const [isSatelliteSelected, setIsSatelliteSelected] = useState<boolean>(false);
+  const [internalSelectedSatId, setInternalSelectedSatId] = useState<string>(selectedSatelliteId || 'scs-04-16');
 
-  const isSatelliteSelectedRef = useRef(isSatelliteSelected);
   useEffect(() => {
-    isSatelliteSelectedRef.current = isSatelliteSelected;
-  }, [isSatelliteSelected]);
+    if (selectedSatelliteId) {
+      setInternalSelectedSatId(selectedSatelliteId);
+    }
+  }, [selectedSatelliteId]);
 
   // 状态引用保证事件闭包中获取最新状态
   const isMindMapOpenRef = useRef(isMindMapOpen);
@@ -543,8 +541,9 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
 
             // 匹配卫星图标：切换高亮选中状态，并通知外部卫星数据看板展示该卫星数据
             if (typeof id === 'string' && id.startsWith('satellite-')) {
-              setIsSatelliteSelected((prev: boolean) => !prev);
-              onSelectSatelliteRef.current?.(SATELLITE_NORAD_ID);
+              const clickedSatId = id.replace('satellite-', '');
+              setInternalSelectedSatId(clickedSatId);
+              onSelectSatelliteRef.current?.(clickedSatId);
               return;
             }
           }
@@ -712,82 +711,94 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
     );
   };
 
-  // 添加环绕地球的卫星空间惯性轨道圆环与实时卫星图标 (ECI 地心惯性坐标系动力学解算)
+  // 添加环绕地球的全星座卫星空间惯性轨道圆环与实时卫星图标 (ECI 地心惯性坐标系动力学解算)
   const addSatelliteOrbit = (viewer: any) => {
-    const satrec = satellite.twoline2satrec(SATELLITE_TLE_LINE1, SATELLITE_TLE_LINE2);
-    satelliteSatrecRef.current = satrec;
-
-    // 依据平均运动解算轨道周期 (分钟)
-    const meanMotionRevPerDay = satrec.no * (1440 / (2 * Math.PI));
-    const orbitalPeriodMinutes = 1440 / meanMotionRevPerDay;
-    const sampleCount = 200;
-
-    // 计算当前时刻下的惯性空间轨道环 (在当前瞬间惯性参考系 ECI 下解算整个轨道闭合椭圆，并投影到当前地球视口中)
-    const computeInertialOrbitPositions = (currentDate: Date) => {
-      const gmst = satellite.gstime(currentDate);
-      const positions: any[] = [];
-      for (let i = 0; i < sampleCount; i++) {
-        const t = new Date(currentDate.getTime() + (i / sampleCount) * orbitalPeriodMinutes * 60000);
-        const pv = satellite.propagate(satrec, t);
-        if (!pv.position || typeof pv.position === 'boolean') continue;
-        const ecf = satellite.eciToEcf(pv.position, gmst);
-        positions.push(new Cesium.Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000));
-      }
-      if (positions.length > 0) {
-        positions.push(positions[0]); // 完美平滑闭合轨道圆环
-      }
-      return positions;
-    };
-
-    // 惯性轨道空间圆环：基于当前时刻 ECI 惯性轨道平面解算，随地球自转平滑动态更新
-    satelliteOrbitEntityRef.current = viewer.entities.add({
-      id: 'satellite-orbit-ring',
-      name: `${SATELLITE_NORAD_ID} 惯性空间轨道`,
-      polyline: {
-        positions: new Cesium.CallbackProperty(() => {
-          return computeInertialOrbitPositions(new Date());
-        }, false),
-        width: 1.5,
-        material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.65),
-        arcType: Cesium.ArcType.NONE,
-      },
-    });
-
     satelliteNormalUrlRef.current = createSatelliteMarkerCanvas(false);
     satelliteSelectedUrlRef.current = createSatelliteMarkerCanvas(true);
+    satelliteEntitiesRef.current = [];
 
-    // 卫星实时星体位置：基于 ECI 惯性坐标动力学严格解算
-    satelliteEntityRef.current = viewer.entities.add({
-      id: `satellite-${SATELLITE_NORAD_ID}`,
-      name: SATELLITE_NORAD_ID,
-      position: new Cesium.CallbackProperty(() => {
-        const now = new Date();
-        const pv = satellite.propagate(satrec, now);
-        if (!pv.position || typeof pv.position === 'boolean') return undefined;
-        const gmst = satellite.gstime(now);
-        const ecf = satellite.eciToEcf(pv.position, gmst);
-        return new Cesium.Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
-      }, false),
-      billboard: {
-        image: satelliteNormalUrlRef.current,
-        width: 20,
-        height: 20,
-        verticalOrigin: Cesium.VerticalOrigin.CENTER,
-        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      },
-      label: {
-        text: SATELLITE_NORAD_ID,
-        font: '12px sans-serif',
-        fillColor: Cesium.Color.fromCssColorString('#e0f2fe'),
-        outlineColor: Cesium.Color.BLACK,
-        outlineWidth: 2,
-        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        verticalOrigin: Cesium.VerticalOrigin.TOP,
-        pixelOffset: new Cesium.Cartesian2(0, 14),
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        show: false,
-      },
+    const sampleCount = 180;
+
+    SATELLITE_CONSTELLATION_ITEMS.forEach((satItem) => {
+      const satrec = satellite.twoline2satrec(satItem.line1, satItem.line2);
+      if (satrec.error) return;
+
+      const meanMotionRevPerDay = satrec.no * (1440 / (2 * Math.PI));
+      const orbitalPeriodMinutes = 1440 / meanMotionRevPerDay;
+
+      // 计算当前时刻下的惯性空间轨道环 (在当前瞬间惯性参考系 ECI 下解算整个轨道闭合椭圆，并投影到当前地球视口中)
+      const computeInertialOrbitPositions = (currentDate: Date) => {
+        const gmst = satellite.gstime(currentDate);
+        const positions: any[] = [];
+        for (let i = 0; i < sampleCount; i++) {
+          const t = new Date(currentDate.getTime() + (i / sampleCount) * orbitalPeriodMinutes * 60000);
+          const pv = satellite.propagate(satrec, t);
+          if (!pv.position || typeof pv.position === 'boolean') continue;
+          const ecf = satellite.eciToEcf(pv.position, gmst);
+          positions.push(new Cesium.Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000));
+        }
+        if (positions.length > 0) {
+          positions.push(positions[0]); // 完美平滑闭合轨道圆环
+        }
+        return positions;
+      };
+
+      // 惯性轨道空间圆环
+      const orbitEntity = viewer.entities.add({
+        id: `satellite-orbit-${satItem.id}`,
+        name: `${satItem.code} 惯性空间轨道`,
+        polyline: {
+          positions: new Cesium.CallbackProperty(() => {
+            return computeInertialOrbitPositions(new Date());
+          }, false),
+          width: satItem.id === 'scs-04-16' ? 1.5 : 1.2,
+          material: satItem.id === 'scs-04-16'
+            ? Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.65)
+            : Cesium.Color.fromCssColorString('#0ea5e9').withAlpha(0.35),
+          arcType: Cesium.ArcType.NONE,
+        },
+      });
+
+      // 卫星实时星体位置：基于 ECI 惯性坐标动力学严格解算
+      const satEntity = viewer.entities.add({
+        id: `satellite-${satItem.id}`,
+        name: satItem.code,
+        position: new Cesium.CallbackProperty(() => {
+          const now = new Date();
+          const pv = satellite.propagate(satrec, now);
+          if (!pv.position || typeof pv.position === 'boolean') return undefined;
+          const gmst = satellite.gstime(now);
+          const ecf = satellite.eciToEcf(pv.position, gmst);
+          return new Cesium.Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
+        }, false),
+        billboard: {
+          image: satelliteNormalUrlRef.current,
+          width: 20,
+          height: 20,
+          verticalOrigin: Cesium.VerticalOrigin.CENTER,
+          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+        label: {
+          text: satItem.code,
+          font: '12px sans-serif',
+          fillColor: Cesium.Color.fromCssColorString('#e0f2fe'),
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 2,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          verticalOrigin: Cesium.VerticalOrigin.TOP,
+          pixelOffset: new Cesium.Cartesian2(0, 14),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          show: false,
+        },
+      });
+
+      satelliteEntitiesRef.current.push({
+        id: satItem.id,
+        code: satItem.code,
+        entity: satEntity,
+        orbitEntity,
+      });
     });
   };
 
@@ -849,20 +860,29 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
     });
   }, [selectedPointId, cesiumReady]);
 
-  // 根据选中状态高亮卫星图标、放大比例并显示编号标签
+  // 根据选中状态高亮全星座中对应的卫星图标、放大比例并显示编号标签
   useEffect(() => {
     if (!viewerRef.current || !cesiumReady) return;
-    const entity = satelliteEntityRef.current;
-    if (!entity || !entity.billboard) return;
 
-    entity.billboard.image = isSatelliteSelected
-      ? satelliteSelectedUrlRef.current
-      : satelliteNormalUrlRef.current;
-    entity.billboard.scale = isSatelliteSelected ? 1.3 : 1.0;
-    if (entity.label) {
-      entity.label.show = isSatelliteSelected;
-    }
-  }, [isSatelliteSelected, cesiumReady]);
+    satelliteEntitiesRef.current.forEach((satObj) => {
+      const isSelected = satObj.id === internalSelectedSatId || satObj.code.toLowerCase() === (internalSelectedSatId || '').toLowerCase();
+      if (satObj.entity && satObj.entity.billboard) {
+        satObj.entity.billboard.image = isSelected
+          ? satelliteSelectedUrlRef.current
+          : satelliteNormalUrlRef.current;
+        satObj.entity.billboard.scale = isSelected ? 1.3 : 1.0;
+        if (satObj.entity.label) {
+          satObj.entity.label.show = isSelected;
+        }
+      }
+      if (satObj.orbitEntity && satObj.orbitEntity.polyline) {
+        satObj.orbitEntity.polyline.width = isSelected ? 2.0 : 1.2;
+        satObj.orbitEntity.polyline.material = isSelected
+          ? Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85)
+          : Cesium.Color.fromCssColorString('#0ea5e9').withAlpha(0.28);
+      }
+    });
+  }, [internalSelectedSatId, cesiumReady]);
 
   // 平滑飞往当前选中的地球对象（直接正射俯视放大，不旋转地球）
   const handleFlyToFenghuang = useCallback(() => {
