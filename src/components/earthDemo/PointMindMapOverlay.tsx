@@ -248,16 +248,19 @@ export const PointMindMapOverlay: React.FC<PointMindMapOverlayProps> = ({
   const iconX = Math.max(50, Math.min(originX + iconOffset.dx, screenWidth - 50));
   const iconY = Math.max(60, Math.min(originY + iconOffset.dy, screenHeight - 60));
 
-  // 统一的精致卡片尺寸规范（2级结构）
-  const nodeW1 = 186; // 一级卡片宽度
-  const nodeH1 = 52; // 一级卡片高度
-  const nodeW2 = 216; // 二级卡片宽度
-  const nodeH2 = 40; // 二级卡片高度
+  // 统一的精致卡片尺寸规范（根据屏幕与容器分辨率在 2k 以下屏幕自适应缩小，防止重叠）
+  const is2kOrAbove = screenWidth >= 2000 && screenHeight >= 1200;
+  const isCompact = screenWidth < 1440;
 
-  const gap1 = 72; // 地球圆点到1级节点的引出间距
-  const gap2 = 44; // 1级卡片到2级卡片的层级间隙
+  const nodeW1 = is2kOrAbove ? 186 : isCompact ? 142 : 158; // 一级卡片宽度
+  const nodeH1 = is2kOrAbove ? 52 : isCompact ? 40 : 44;   // 一级卡片高度
+  const nodeW2 = is2kOrAbove ? 216 : isCompact ? 156 : 178; // 二级卡片宽度
+  const nodeH2 = is2kOrAbove ? 40 : isCompact ? 32 : 36;   // 二级卡片高度
 
-  const verticalItemGap = 12; // 同级卡片垂直间距
+  const gap1 = is2kOrAbove ? 72 : isCompact ? 42 : 52;     // 地球圆点到1级节点的引出间距
+  const gap2 = is2kOrAbove ? 44 : isCompact ? 26 : 34;     // 1级卡片到2级卡片的层级间隙
+
+  const verticalItemGap = is2kOrAbove ? 12 : isCompact ? 7 : 9; // 同级卡片垂直间距
 
   // 计算多级树状拓扑布局
   const layoutTree: Level1LayoutNode[] = useMemo(() => {
@@ -266,14 +269,15 @@ export const PointMindMapOverlay: React.FC<PointMindMapOverlayProps> = ({
 
     const leftSpace = iconX;
     const rightSpace = screenWidth - iconX;
+    const minRequiredSideSpace = nodeW1 + gap1 + 40;
 
     // 分流策略：依据点位左右空间分配分支
     let leftCount = 0;
     let rightCount = 0;
-    if (leftSpace >= 380 && rightSpace >= 380) {
+    if (leftSpace >= minRequiredSideSpace && rightSpace >= minRequiredSideSpace) {
       leftCount = Math.floor(total / 2);
       rightCount = total - leftCount;
-    } else if (rightSpace >= 380) {
+    } else if (rightSpace >= minRequiredSideSpace) {
       leftCount = 0;
       rightCount = total;
     } else {
@@ -691,11 +695,11 @@ export const PointMindMapOverlay: React.FC<PointMindMapOverlayProps> = ({
         );
       })}
 
-      {/* 二级数据列表面板：点击二级处理级别后，靠左且略微偏上展示其具体数据表格，半透明毛玻璃，不遮挡底部居中状态标尺 */}
+      {/* 二级数据列表面板：点击二级处理级别后，靠左且略微偏上展示其具体数据表格，半透明毛玻璃，在 2k 以下屏幕自适应更紧凑，避免大面积遮挡 */}
       {selectedLevel2 && (
-        <div className="absolute left-4 sm:left-6 bottom-16 pointer-events-auto z-40 w-[620px] max-w-[calc(100vw-2rem)] rounded-2xl bg-black/55 border border-white/15 backdrop-blur-2xl shadow-2xl animate-fadeIn overflow-hidden">
-          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-white/15 bg-white/[0.04]">
-            <div className="flex items-center gap-2 min-w-0">
+        <div className="absolute left-3 sm:left-4 bottom-12 sm:bottom-14 pointer-events-auto z-40 w-[480px] lg:w-[540px] 2xl:w-[620px] max-w-[calc(100vw-1.5rem)] rounded-xl sm:rounded-2xl bg-black/60 border border-white/15 backdrop-blur-2xl shadow-2xl animate-fadeIn overflow-hidden">
+          <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/15 bg-white/[0.04]">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <Database className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />
               <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 flex-shrink-0">
                 {selectedLevel2.level}
@@ -712,17 +716,17 @@ export const PointMindMapOverlay: React.FC<PointMindMapOverlayProps> = ({
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          <div className="max-h-60 overflow-y-auto custom-scrollbar">
+          <div className="max-h-44 sm:max-h-52 2xl:max-h-60 overflow-y-auto custom-scrollbar">
             {selectedLevel2.records && selectedLevel2.records.length > 0 ? (
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full text-left text-[11px] 2xl:text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 bg-white/[0.04] text-[11px] text-slate-400">
-                    <th className="px-3.5 py-2 font-medium whitespace-nowrap">时间</th>
-                    <th className="px-3.5 py-2 font-medium whitespace-nowrap">地点</th>
-                    <th className="px-3.5 py-2 font-medium whitespace-nowrap">经度</th>
-                    <th className="px-3.5 py-2 font-medium whitespace-nowrap">纬度</th>
-                    <th className="px-3.5 py-2 font-medium whitespace-nowrap">土地类型</th>
-                    <th className="px-3.5 py-2 font-medium whitespace-nowrap">数据来源（卫星）</th>
+                  <tr className="border-b border-white/10 bg-white/[0.04] text-[10px] 2xl:text-[11px] text-slate-400">
+                    <th className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2 font-medium whitespace-nowrap">时间</th>
+                    <th className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2 font-medium whitespace-nowrap">地点</th>
+                    <th className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2 font-medium whitespace-nowrap">经度</th>
+                    <th className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2 font-medium whitespace-nowrap">纬度</th>
+                    <th className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2 font-medium whitespace-nowrap">土地类型</th>
+                    <th className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2 font-medium whitespace-nowrap">数据来源（卫星）</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.06]">
@@ -737,24 +741,24 @@ export const PointMindMapOverlay: React.FC<PointMindMapOverlayProps> = ({
                           content: selectedLevel2.content,
                         });
                       }}
-                      className="hover:bg-cyan-500/10 cursor-pointer transition-colors text-[11px] text-slate-200 group/row"
+                      className="hover:bg-cyan-500/10 cursor-pointer transition-colors text-[10px] 2xl:text-[11px] text-slate-200 group/row"
                       title="点击查看遥感影像详情与反演分析"
                     >
-                      <td className="px-3.5 py-2.5 font-mono text-slate-300 whitespace-nowrap group-hover/row:text-cyan-200">{item.time}</td>
-                      <td className="px-3.5 py-2.5 text-white font-medium whitespace-nowrap group-hover/row:text-cyan-100">{item.location}</td>
-                      <td className="px-3.5 py-2.5 font-mono text-slate-300 whitespace-nowrap">{item.lng}</td>
-                      <td className="px-3.5 py-2.5 font-mono text-slate-300 whitespace-nowrap">{item.lat}</td>
-                      <td className="px-3.5 py-2.5 whitespace-nowrap">
-                        <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 text-[10px]">
+                      <td className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2.5 font-mono text-slate-300 whitespace-nowrap group-hover/row:text-cyan-200">{item.time}</td>
+                      <td className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2.5 text-white font-medium whitespace-nowrap group-hover/row:text-cyan-100">{item.location}</td>
+                      <td className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2.5 font-mono text-slate-300 whitespace-nowrap">{item.lng}</td>
+                      <td className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2.5 font-mono text-slate-300 whitespace-nowrap">{item.lat}</td>
+                      <td className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2.5 whitespace-nowrap">
+                        <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 text-[9px] 2xl:text-[10px]">
                           {item.landType}
                         </span>
                       </td>
-                      <td className="px-3.5 py-2.5 text-cyan-300 font-medium whitespace-nowrap flex items-center justify-between gap-1">
+                      <td className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2.5 text-cyan-300 font-medium whitespace-nowrap flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1">
                           <Satellite className="w-3 h-3 text-cyan-400 shrink-0" />
                           <span>{item.source}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-0.5">
+                        <span className="text-[9px] 2xl:text-[10px] text-slate-400 opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center gap-0.5">
                           详情 <ChevronRight className="w-2.5 h-2.5" />
                         </span>
                       </td>
@@ -763,7 +767,7 @@ export const PointMindMapOverlay: React.FC<PointMindMapOverlayProps> = ({
                 </tbody>
               </table>
             ) : (
-              <div className="text-[11px] text-slate-400 text-center py-4">暂无数据记录</div>
+              <div className="text-[10px] 2xl:text-[11px] text-slate-400 text-center py-3 sm:py-4">暂无数据记录</div>
             )}
           </div>
         </div>

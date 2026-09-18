@@ -973,14 +973,14 @@ function MonitorSection({
     <div className="border-t border-white/10 first:border-t-0">
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-2 px-3.5 py-2.5 hover:bg-white/5 transition-colors cursor-pointer"
+        className="w-full flex items-center gap-1.5 2xl:gap-2 px-2.5 py-1.5 2xl:px-3.5 2xl:py-2.5 hover:bg-white/5 transition-colors cursor-pointer"
       >
         {icon}
-        <span className="text-xs font-bold text-slate-200 flex-1 text-left">{label}</span>
+        <span className="text-[11px] 2xl:text-xs font-bold text-slate-200 flex-1 text-left">{label}</span>
         {badge}
-        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`} />
+        <ChevronDown className={`w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-slate-400 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`} />
       </button>
-      {open && <div className="px-3.5 pb-3.5 space-y-2 animate-fadeIn">{children}</div>}
+      {open && <div className="px-2.5 pb-2.5 2xl:px-3.5 2xl:pb-3.5 space-y-1.5 2xl:space-y-2 animate-fadeIn">{children}</div>}
     </div>
   );
 }
@@ -1154,40 +1154,40 @@ function MonitorCard({
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#0c101c]/80 border border-white/15 flex items-center justify-center text-cyan-300 shadow-2xl backdrop-blur-2xl hover:border-cyan-400/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] hover:scale-105 transition-all duration-200 cursor-pointer group"
+        className="w-8 h-8 sm:w-9 sm:h-9 2xl:w-10 2xl:h-10 rounded-xl bg-[#0c101c]/80 border border-white/15 flex items-center justify-center text-cyan-300 shadow-2xl backdrop-blur-2xl hover:border-cyan-400/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] hover:scale-105 transition-all duration-200 cursor-pointer group"
         title="展开空间要素与卫星数据面板"
       >
-        <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-300 group-hover:text-cyan-200 transition-colors" />
+        <Menu className="w-3.5 h-3.5 sm:w-4 sm:h-4 2xl:w-5 2xl:h-5 text-cyan-300 group-hover:text-cyan-200 transition-colors" />
       </button>
     );
   }
 
   return (
-    <div className="w-64 sm:w-72 lg:w-80 2xl:w-72 max-h-[calc(100vh-5rem)] sm:max-h-[calc(100vh-6rem)] bg-black/55 border border-white/15 rounded-2xl shadow-xl backdrop-blur-xl flex flex-col text-left select-none animate-fadeIn relative z-30 overflow-hidden">
+    <div className="w-60 sm:w-64 lg:w-72 2xl:w-80 max-h-[calc(100vh-4.5rem)] sm:max-h-[calc(100vh-5.5rem)] 2xl:max-h-[calc(100vh-6rem)] bg-black/60 border border-white/15 rounded-xl sm:rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col text-left select-none animate-fadeIn relative z-30 overflow-hidden">
       {/* Panel Header: 顶栏汉堡包 Tab 切换与折叠按钮 */}
-      <div className="p-2.5 px-3 border-b border-white/10 bg-white/5 flex items-center justify-between rounded-t-2xl shrink-0">
-        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-black/40 border border-white/10">
+      <div className="p-2 px-2.5 2xl:p-2.5 2xl:px-3 border-b border-white/10 bg-white/5 flex items-center justify-between rounded-t-xl sm:rounded-t-2xl shrink-0">
+        <div className="flex items-center gap-0.5 p-0.5 rounded-lg 2xl:rounded-xl bg-black/40 border border-white/10">
           <button
             onClick={() => setActiveTab('spatial')}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 2xl:gap-1.5 px-1.5 py-0.5 2xl:px-2 2xl:py-1 rounded-md 2xl:rounded-lg text-[11px] 2xl:text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'spatial'
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 border border-transparent'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
+            <Layers className="w-3 h-3 2xl:w-3.5 2xl:h-3.5" />
             <span>空间要素</span>
           </button>
 
           <button
             onClick={() => setActiveTab('satellite')}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 2xl:gap-1.5 px-1.5 py-0.5 2xl:px-2 2xl:py-1 rounded-md 2xl:rounded-lg text-[11px] 2xl:text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'satellite'
                 ? 'bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 border border-transparent'
             }`}
           >
-            <SatelliteIcon className="w-3.5 h-3.5" />
+            <SatelliteIcon className="w-3 h-3 2xl:w-3.5 2xl:h-3.5" />
             <span>卫星数据</span>
           </button>
         </div>
@@ -1197,7 +1197,7 @@ function MonitorCard({
           className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           title="折叠面板"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
         </button>
       </div>
 
@@ -1205,53 +1205,53 @@ function MonitorCard({
         {activeTab === 'spatial' ? (
           <div>
             {/* 模块零：空间要素 —— 全球林火巡查 / 古建筑分类下拉筛选 */}
-            <div className="p-3.5 border-t border-white/10 first:border-t-0">
+            <div className="p-2.5 2xl:p-3.5 border-t border-white/10 first:border-t-0">
           <div className="relative">
             <button
               onClick={() => setIsSpatialCategoryOpen((v) => !v)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 2xl:px-3 2xl:py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 activeSpatialCategory === 'fire'
                   ? 'bg-gradient-to-r from-rose-500/18 via-rose-950/20 to-transparent border-rose-500/30'
                   : 'bg-gradient-to-r from-amber-500/18 via-amber-950/20 to-transparent border-amber-500/30'
               }`}
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2 2xl:gap-2.5">
                 <span
-                  className={`w-4 h-4 rounded-full border-2 border-white shadow-md flex-shrink-0 ${
+                  className={`w-3.5 h-3.5 2xl:w-4 2xl:h-4 rounded-full border-2 border-white shadow-md flex-shrink-0 ${
                     activeSpatialCategory === 'fire' ? 'bg-rose-500 shadow-rose-500/50' : 'bg-[#8b4513] shadow-amber-700/50'
                   }`}
                 />
-                <span className="text-xs font-bold text-white">
+                <span className="text-[11px] 2xl:text-xs font-bold text-white">
                   {activeSpatialCategory === 'fire' ? '全球林火自主巡查' : '古建筑'}
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[9px] 2xl:text-[10px] text-slate-400 font-mono">
                   {activeSpatialCategory === 'fire' ? firePointsCount : buildingPointsCount} 处
                 </span>
               </div>
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isSpatialCategoryOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-slate-400 transition-transform ${isSpatialCategoryOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isSpatialCategoryOpen && (
               <div className="absolute top-full left-0 right-0 mt-1.5 z-10 bg-black/90 border border-white/15 rounded-xl shadow-2xl overflow-hidden">
                 <button
                   onClick={() => handleSelectSpatialCategory('fire')}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`w-full flex items-center gap-2 2xl:gap-2.5 px-2.5 py-2 2xl:px-3 2xl:py-2.5 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
                     activeSpatialCategory === 'fire' ? 'bg-rose-500/20 text-rose-300' : 'text-slate-300 hover:bg-white/10'
                   }`}
                 >
-                  <span className="w-3.5 h-3.5 rounded-full bg-rose-500 border-2 border-white flex-shrink-0" />
+                  <span className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 rounded-full bg-rose-500 border-2 border-white flex-shrink-0" />
                   <span>林火巡查</span>
-                  <span className="ml-auto text-[10px] text-slate-500 font-mono">{firePointsCount}</span>
+                  <span className="ml-auto text-[9px] 2xl:text-[10px] text-slate-500 font-mono">{firePointsCount}</span>
                 </button>
                 <button
                   onClick={() => handleSelectSpatialCategory('building')}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`w-full flex items-center gap-2 2xl:gap-2.5 px-2.5 py-2 2xl:px-3 2xl:py-2.5 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
                     activeSpatialCategory === 'building' ? 'bg-amber-500/20 text-amber-300' : 'text-slate-300 hover:bg-white/10'
                   }`}
                 >
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#8b4513] border-2 border-white flex-shrink-0" />
+                  <span className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 rounded-full bg-[#8b4513] border-2 border-white flex-shrink-0" />
                   <span>古建筑</span>
-                  <span className="ml-auto text-[10px] text-slate-500 font-mono">{buildingPointsCount}</span>
+                  <span className="ml-auto text-[9px] 2xl:text-[10px] text-slate-500 font-mono">{buildingPointsCount}</span>
                 </button>
               </div>
             )}
@@ -1259,8 +1259,8 @@ function MonitorCard({
         </div>
 
         {/* 模块一：总量 —— 累计监测、已拍摄地区、已拍摄照片 */}
-        <div className="p-3.5 border-t border-white/10">
-          <div className="grid grid-cols-3 gap-2">
+        <div className="p-2.5 2xl:p-3.5 border-t border-white/10">
+          <div className="grid grid-cols-3 gap-1.5 2xl:gap-2">
             {[
               {
                 label: '累计监测',
@@ -1290,20 +1290,20 @@ function MonitorCard({
             ].map((item) => (
               <div
                 key={item.label}
-                className={`aspect-square p-2 rounded-xl border flex flex-col items-center justify-center gap-1 text-center backdrop-blur-md transition-all ${item.bgGradient}`}
+                className={`aspect-square p-1.5 2xl:p-2 rounded-lg 2xl:rounded-xl border flex flex-col items-center justify-center gap-0.5 2xl:gap-1 text-center backdrop-blur-md transition-all ${item.bgGradient}`}
               >
-                <div className={`text-base font-bold font-mono leading-tight ${item.valColor}`}>
+                <div className={`text-xs 2xl:text-base font-bold font-mono leading-tight ${item.valColor}`}>
                   <AnimatedNumber value={item.value} formatter={item.formatter} />
                 </div>
-                <span className="text-[10px] text-slate-400 leading-tight">{item.unit}</span>
-                <span className="text-[10px] font-medium text-slate-300 leading-tight">{item.label}</span>
+                <span className="text-[9px] 2xl:text-[10px] text-slate-400 leading-tight">{item.unit}</span>
+                <span className="text-[9px] 2xl:text-[10px] font-medium text-slate-300 leading-tight">{item.label}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* 模块二：筛选区 —— 地点搜索（仅展示地图上实际存在的点位） */}
-        <div className="p-3.5 border-t border-white/10 space-y-2">
+        <div className="p-2.5 2xl:p-3.5 border-t border-white/10 space-y-1.5 2xl:space-y-2">
           <LocationSearch
             locations={spatialLocationOptions}
             selectedLocation={selectedSpatialPointId}
@@ -1320,7 +1320,7 @@ function MonitorCard({
           icon={<Activity className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
           label="当前任务"
           badge={isRunning && !sync?.cycleFinished ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-400/20 text-sky-200 border border-sky-400/40">执行中</span>
+            <span className="px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold bg-sky-400/20 text-sky-200 border border-sky-400/40">执行中</span>
           ) : undefined}
           open={taskOpen}
           onToggle={() => setTaskOpen((v) => !v)}
@@ -1329,13 +1329,13 @@ function MonitorCard({
           <div className="relative">
             <button
               onClick={() => setIsCycleOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-sky-400/50 transition-all cursor-pointer text-xs"
+              className="w-full flex items-center justify-between gap-1.5 2xl:gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 rounded-xl bg-white/5 border border-white/10 hover:border-sky-400/50 transition-all cursor-pointer text-[11px] 2xl:text-xs"
             >
-              <span className="flex items-center gap-2 min-w-0">
-                <Calendar className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+              <span className="flex items-center gap-1.5 2xl:gap-2 min-w-0">
+                <Calendar className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />
                 <span className="truncate font-semibold text-slate-200">{selectedCycle.label}</span>
               </span>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isCycleOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-slate-400 shrink-0 transition-transform ${isCycleOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isCycleOpen && (
@@ -1344,12 +1344,12 @@ function MonitorCard({
                   <button
                     key={c.id}
                     onClick={() => { setSelectedCycleId(c.id); setIsCycleOpen(false); }}
-                    className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
                       c.id === selectedCycleId ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-white/10'
                     }`}
                   >
                     <span className="truncate">{c.label}</span>
-                    <span className="text-[10px] text-slate-500 font-mono shrink-0">{c.totalDays}天</span>
+                    <span className="text-[9px] 2xl:text-[10px] text-slate-500 font-mono shrink-0">{c.totalDays}天</span>
                   </button>
                 ))}
               </div>
@@ -1357,20 +1357,20 @@ function MonitorCard({
           </div>
 
           {isPastCycle ? (
-            <div className="space-y-1.5">
-              <div className="text-sm font-bold text-white font-mono">{selectedCycle.startDate} ~ {selectedCycle.endDate}</div>
+            <div className="space-y-1 2xl:space-y-1.5">
+              <div className="text-xs 2xl:text-sm font-bold text-white font-mono">{selectedCycle.startDate} ~ {selectedCycle.endDate}</div>
               <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
                 <div className="h-full rounded-full shadow-[0_0_6px_#34d399] bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: '100%' }} />
               </div>
               <div className="flex items-center justify-end">
-                <span className="text-xs font-bold font-mono text-emerald-300">
+                <span className="text-[11px] 2xl:text-xs font-bold font-mono text-emerald-300">
                   已完成 {selectedCycle.totalDays}/{selectedCycle.totalDays} 天
                 </span>
               </div>
             </div>
           ) : isRunning ? (
-            <div className="space-y-1.5">
-              <div className="text-sm font-bold text-white font-mono">{startDate} ~ {endDate}</div>
+            <div className="space-y-1 2xl:space-y-1.5">
+              <div className="text-xs 2xl:text-sm font-bold text-white font-mono">{startDate} ~ {endDate}</div>
               <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
                 <div
                   className={`h-full rounded-full shadow-[0_0_6px_#38bdf8] transition-all ${
@@ -1380,7 +1380,7 @@ function MonitorCard({
                 />
               </div>
               <div className="flex items-center justify-end">
-                <span className={`text-xs font-bold font-mono ${sync?.cycleFinished ? 'text-emerald-300' : 'text-sky-300'}`}>
+                <span className={`text-[11px] 2xl:text-xs font-bold font-mono ${sync?.cycleFinished ? 'text-emerald-300' : 'text-sky-300'}`}>
                   {sync?.cycleFinished ? '已完成' : '已执行'} {activeDay}/{totalDays} 天
                 </span>
               </div>
@@ -1388,7 +1388,7 @@ function MonitorCard({
           ) : (
             <div className="flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-300">当前无任务</span>
+              <span className="text-[11px] 2xl:text-xs font-semibold text-slate-300">当前无任务</span>
             </div>
           )}
 
@@ -1420,33 +1420,33 @@ function MonitorCard({
             </div>
 
             {isPastCycle ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5 2xl:space-y-2">
                 {(() => {
                   const detail = buildPastCycleDayDetail(selectedCycle.startDate, activeDay, locations);
                   return (
                     <>
                       <ProgressStepSection index={0} label="接收拍摄需求" status="done">
-                        <div className="space-y-1.5">
+                        <div className="space-y-1 2xl:space-y-1.5">
                           {detail.locations.map((l) => (
-                            <div key={l.name} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                              <span className="flex items-center gap-1.5 min-w-0">
+                            <div key={l.name} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                              <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
                                 <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-                                <span className="text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
+                                <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
                               </span>
-                              <span className="text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
+                              <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
                             </div>
                           ))}
                         </div>
                       </ProgressStepSection>
 
                       <ProgressStepSection index={1} label="生成任务规划" status="done">
-                        <div className="space-y-1.5">
-                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/15 text-emerald-400 border-emerald-500/25">已生成</span>
+                        <div className="space-y-1 2xl:space-y-1.5">
+                          <span className="inline-block px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold border bg-emerald-500/15 text-emerald-400 border-emerald-500/25">已生成</span>
                           <div className="rounded-lg border border-white/10 overflow-hidden">
                             {detail.planTable.map((row) => (
-                              <div key={row.time + row.location} className="flex items-center justify-between gap-2 px-2.5 py-1.5 odd:bg-white/[0.03] even:bg-transparent">
-                                <span className="text-[10px] font-mono text-sky-300 shrink-0">{row.time}</span>
-                                <span className="text-[11px] font-semibold text-slate-200 truncate text-right">{row.location}</span>
+                              <div key={row.time + row.location} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 odd:bg-white/[0.03] even:bg-transparent">
+                                <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{row.time}</span>
+                                <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate text-right">{row.location}</span>
                               </div>
                             ))}
                           </div>
@@ -1454,18 +1454,18 @@ function MonitorCard({
                       </ProgressStepSection>
 
                       <ProgressStepSection index={2} label="每天执行步骤同步" status="done">
-                        <div className="space-y-1.5">
-                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-0.5">
+                        <div className="space-y-1 2xl:space-y-1.5">
+                          <div className="text-[9px] 2xl:text-[10px] font-bold text-slate-500 uppercase tracking-wide px-0.5">
                             第{activeDay}天任务已执行完成
                           </div>
-                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[11px] font-semibold text-slate-300">地面模型规划</span>
+                          <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                            <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">地面模型规划</span>
                             <span className={progressStageBadgeClass(PROGRESS_GROUND_STEPS.length, PROGRESS_GROUND_STEPS.length)}>
                               {progressStageLabel(PROGRESS_GROUND_STEPS.length, PROGRESS_GROUND_STEPS.length)}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[11px] font-semibold text-slate-300">星上任务执行</span>
+                          <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                            <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">星上任务执行</span>
                             <span className={progressStageBadgeClass(PROGRESS_ONBOARD_STEPS.length, PROGRESS_ONBOARD_STEPS.length)}>
                               {progressStageLabel(PROGRESS_ONBOARD_STEPS.length, PROGRESS_ONBOARD_STEPS.length)}
                             </span>
@@ -1474,7 +1474,7 @@ function MonitorCard({
                       </ProgressStepSection>
 
                       <ProgressStepSection index={3} label="本周期任务执行完毕" status="done">
-                        <span className="text-[11px] font-medium text-emerald-400">
+                        <span className="text-[10px] 2xl:text-[11px] font-medium text-emerald-400">
                           全部执行天数已完成，任务周期结束。
                         </span>
                       </ProgressStepSection>
@@ -1483,31 +1483,31 @@ function MonitorCard({
                 })()}
               </div>
             ) : !sync ? (
-              <div className="p-3 rounded-xl border border-dashed border-white/15 flex items-center gap-2">
+              <div className="p-2.5 2xl:p-3 rounded-xl border border-dashed border-white/15 flex items-center gap-2">
                 <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0 animate-pulse" />
-                <span className="text-xs font-semibold text-slate-400">正在接收拍摄需求…</span>
+                <span className="text-[11px] 2xl:text-xs font-semibold text-slate-400">正在接收拍摄需求…</span>
               </div>
             ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5 2xl:space-y-2">
                 {activeDay === sync.day ? (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 2xl:space-y-2">
                     <ProgressStepSection key={`step0-${stepStatus(0)}`} index={0} label="接收拍摄需求" status={stepStatus(0)}>
-                      <div className={`space-y-1.5 ${stepStatus(0) === 'current' ? 'animate-pulse' : ''}`}>
+                      <div className={`space-y-1 2xl:space-y-1.5 ${stepStatus(0) === 'current' ? 'animate-pulse' : ''}`}>
                         {sync.locations.map((l) => (
-                          <div key={l.name} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            <span className="flex items-center gap-1.5 min-w-0">
+                          <div key={l.name} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                            <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
                               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-                              <span className="text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
+                              <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
                             </span>
-                            <span className="text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
+                            <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
                           </div>
                         ))}
                       </div>
                     </ProgressStepSection>
 
                     <ProgressStepSection key={`step1-${stepStatus(1)}`} index={1} label="生成任务规划" status={stepStatus(1)}>
-                      <div className="space-y-1.5">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      <div className="space-y-1 2xl:space-y-1.5">
+                        <span className={`inline-block px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold border ${
                           sync.planGenerated
                             ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
                             : 'bg-white/5 text-slate-400 border-white/10'
@@ -1517,9 +1517,9 @@ function MonitorCard({
                         {sync.planGenerated && sync.planTable && (
                           <div className="rounded-lg border border-white/10 overflow-hidden">
                             {sync.planTable.map((row) => (
-                              <div key={row.time + row.location} className="flex items-center justify-between gap-2 px-2.5 py-1.5 odd:bg-white/[0.03] even:bg-transparent">
-                                <span className="text-[10px] font-mono text-sky-300 shrink-0">{row.time}</span>
-                                <span className="text-[11px] font-semibold text-slate-200 truncate text-right">{row.location}</span>
+                              <div key={row.time + row.location} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 odd:bg-white/[0.03] even:bg-transparent">
+                                <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{row.time}</span>
+                                <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate text-right">{row.location}</span>
                               </div>
                             ))}
                           </div>
@@ -1528,18 +1528,18 @@ function MonitorCard({
                     </ProgressStepSection>
 
                     <ProgressStepSection key={`step2-${stepStatus(2)}`} index={2} label="每天执行步骤同步" status={stepStatus(2)}>
-                      <div className="space-y-1.5">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide px-0.5">
+                      <div className="space-y-1 2xl:space-y-1.5">
+                        <div className="text-[9px] 2xl:text-[10px] font-bold text-slate-500 uppercase tracking-wide px-0.5">
                           正在执行【第{sync.day}天】任务
                         </div>
-                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[11px] font-semibold text-slate-300">地面模型规划</span>
+                        <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                          <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">地面模型规划</span>
                           <span className={progressStageBadgeClass(sync.groundStepIndex, PROGRESS_GROUND_STEPS.length)}>
                             {progressStageLabel(sync.groundStepIndex, PROGRESS_GROUND_STEPS.length)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[11px] font-semibold text-slate-300">星上任务执行</span>
+                        <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                          <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">星上任务执行</span>
                           <span className={progressStageBadgeClass(sync.onboardStepIndex, PROGRESS_ONBOARD_STEPS.length)}>
                             {progressStageLabel(sync.onboardStepIndex, PROGRESS_ONBOARD_STEPS.length)}
                           </span>
@@ -1548,15 +1548,15 @@ function MonitorCard({
                     </ProgressStepSection>
 
                     <ProgressStepSection key={`step3-${stepStatus(3)}`} index={3} label="本周期任务执行完毕" status={stepStatus(3)}>
-                      <span className="text-[11px] font-medium text-emerald-400">
+                      <span className="text-[10px] 2xl:text-[11px] font-medium text-emerald-400">
                         全部执行天数已完成，任务周期结束。
                       </span>
                     </ProgressStepSection>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="flex items-center gap-2 px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                     <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="text-[11px] font-semibold text-emerald-400">第{activeDay}天任务已执行完成</span>
+                    <span className="text-[10px] 2xl:text-[11px] font-semibold text-emerald-400">第{activeDay}天任务已执行完成</span>
                   </div>
                 )}
               </div>
@@ -1674,11 +1674,11 @@ function SatelliteDashboardCard({
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-black/55 border border-white/15 text-slate-100 shadow-xl backdrop-blur-xl hover:border-sky-400 transition-all cursor-pointer text-xs font-bold"
+        className="flex items-center gap-1.5 2xl:gap-2 px-2.5 py-2 2xl:px-3.5 2xl:py-2.5 rounded-xl sm:rounded-2xl bg-black/60 border border-white/15 text-slate-100 shadow-xl backdrop-blur-xl hover:border-sky-400 transition-all cursor-pointer text-[11px] 2xl:text-xs font-bold"
         title="展开卫星数据看板"
       >
-        <ChevronRight className="w-3.5 h-3.5 text-sky-500" />
-        <SatelliteIcon className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+        <ChevronRight className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-500" />
+        <SatelliteIcon className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />
         <span>卫星数据</span>
       </button>
     );
@@ -1687,11 +1687,11 @@ function SatelliteDashboardCard({
   const innerPanel = (
     <div className="overflow-y-auto divide-y divide-white/10">
         {/* 卫星下拉筛选（默认 SCS-04-16） */}
-        <div className="p-3.5 border-t border-white/10 first:border-t-0">
+        <div className="p-2.5 2xl:p-3.5 border-t border-white/10 first:border-t-0">
           <div className="relative">
             <button
               onClick={() => setIsSatOpen((v) => !v)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 2xl:px-3 2xl:py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 isSatOpen
                   ? 'border-sky-400 bg-sky-500/15 shadow-[0_0_0_3px_rgba(56,189,248,0.15)]'
                   : 'border-sky-400/50 bg-sky-500/10 hover:border-sky-400/80 hover:bg-sky-500/15'
@@ -1706,15 +1706,15 @@ function SatelliteDashboardCard({
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-100 truncate">{activeSatellite.code}</span>
+                    <span className="text-[11px] 2xl:text-xs font-bold text-slate-100 truncate">{activeSatellite.code}</span>
                     {selectedId === 'scs-04-16' && (
                       <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 shrink-0">实时</span>
                     )}
                   </div>
-                  <div className="text-[10px] text-slate-400 truncate">{activeSatellite.name}</div>
+                  <div className="text-[9px] 2xl:text-[10px] text-slate-400 truncate">{activeSatellite.name}</div>
                 </div>
               </div>
-              <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${isSatOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-slate-400 shrink-0 transition-transform ${isSatOpen ? 'rotate-180' : ''}`} />
             </button>
             {isSatOpen && (
               <div className="absolute left-0 right-0 top-[calc(100%+4px)] rounded-xl border border-white/15 bg-[#0c101c] shadow-xl overflow-hidden z-10 animate-fadeIn">
@@ -1724,7 +1724,7 @@ function SatelliteDashboardCard({
                     <button
                       key={s.id}
                       onClick={() => { onSelectId(s.id); setIsSatOpen(false); }}
-                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs transition-colors cursor-pointer border-l-2 ${
+                      className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 text-left text-[11px] 2xl:text-xs transition-colors cursor-pointer border-l-2 ${
                         isSelected
                           ? 'bg-sky-500/15 text-sky-300 border-sky-400'
                           : 'text-slate-300 border-transparent hover:bg-white/10 hover:border-white/20'
@@ -1732,9 +1732,9 @@ function SatelliteDashboardCard({
                     >
                       <div className="min-w-0">
                         <span className={`font-bold ${isSelected ? 'text-sky-300' : ''}`}>{s.code}</span>
-                        <span className="ml-2 text-[10px] text-slate-400">{s.name}</span>
+                        <span className="ml-2 text-[9px] 2xl:text-[10px] text-slate-400">{s.name}</span>
                       </div>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
+                      {isSelected && <Check className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />}
                     </button>
                   );
                 })}
@@ -1743,35 +1743,35 @@ function SatelliteDashboardCard({
           </div>
         </div>
 
-        {/* 卫星坐标 */}
+        {/* 卫星坐标 (ECI 惯性坐标系) */}
         <MonitorSection
-          icon={<Compass className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
-          label="卫星坐标"
+          icon={<Compass className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />}
+          label="惯性坐标 (ECI)"
           open={coordOpen}
           onToggle={() => setCoordOpen((v) => !v)}
         >
-          <div className="grid grid-cols-2 gap-2">
-            <div className="px-2.5 py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[10px] text-slate-400">X</div>
-              <div className="text-xs font-bold text-slate-100 font-mono">{coord.x.toFixed(1)} km</div>
+          <div className="grid grid-cols-2 gap-1.5 2xl:gap-2">
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">X (ECI)</div>
+              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{coord.x.toFixed(1)} km</div>
             </div>
-            <div className="px-2.5 py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[10px] text-slate-400">Y</div>
-              <div className="text-xs font-bold text-slate-100 font-mono">{coord.y.toFixed(1)} km</div>
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">Y (ECI)</div>
+              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{coord.y.toFixed(1)} km</div>
             </div>
-            <div className="px-2.5 py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[10px] text-slate-400">Z</div>
-              <div className="text-xs font-bold text-slate-100 font-mono">{coord.z.toFixed(1)} km</div>
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">Z (ECI)</div>
+              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{coord.z.toFixed(1)} km</div>
             </div>
-            <div className="px-2.5 py-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-slate-400">方向</div>
-                <div className="text-xs font-bold text-slate-100">{coord.direction === 'N' ? '北向 (N)' : '南向 (S)'}</div>
+                <div className="text-[9px] 2xl:text-[10px] text-slate-400">惯性方向</div>
+                <div className="text-[11px] 2xl:text-xs font-bold text-slate-100">{coord.direction === 'N' ? '北向 (N)' : '南向 (S)'}</div>
               </div>
               {coord.direction === 'N' ? (
-                <ArrowUp className="w-3.5 h-3.5 text-emerald-400" />
+                <ArrowUp className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-emerald-400" />
               ) : (
-                <ArrowDown className="w-3.5 h-3.5 text-amber-400" />
+                <ArrowDown className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-amber-400" />
               )}
             </div>
           </div>
@@ -1779,49 +1779,49 @@ function SatelliteDashboardCard({
 
         {/* 载荷信息 */}
         <MonitorSection
-          icon={<Radio className="w-3.5 h-3.5 text-violet-400 shrink-0" />}
+          icon={<Radio className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-violet-400 shrink-0" />}
           label="载荷信息"
           open={payloadOpen}
           onToggle={() => setPayloadOpen((v) => !v)}
         >
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-[11px] font-semibold text-slate-300">智算算力</span>
-              <span className="text-[11px] font-bold text-sky-400 font-mono">{activeSatellite.payload.aiCompute}</span>
+          <div className="space-y-1 2xl:space-y-1.5">
+            <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">智算算力</span>
+              <span className="text-[10px] 2xl:text-[11px] font-bold text-sky-400 font-mono">{activeSatellite.payload.aiCompute}</span>
             </div>
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-[11px] font-semibold text-slate-300">路由单口速率</span>
-              <span className="text-[11px] font-bold text-sky-400 font-mono">{activeSatellite.payload.routeSpeed}</span>
+            <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">路由单口速率</span>
+              <span className="text-[10px] 2xl:text-[11px] font-bold text-sky-400 font-mono">{activeSatellite.payload.routeSpeed}</span>
             </div>
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-[11px] font-semibold text-slate-300">激光通信速率</span>
-              <span className="text-[11px] font-bold text-sky-400 font-mono">{activeSatellite.payload.laserSpeed}</span>
+            <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">激光通信速率</span>
+              <span className="text-[10px] 2xl:text-[11px] font-bold text-sky-400 font-mono">{activeSatellite.payload.laserSpeed}</span>
             </div>
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-[11px] font-semibold text-slate-300">红外载荷分辨率</span>
-              <span className="text-[11px] font-bold text-sky-400 font-mono">{activeSatellite.payload.infraredResolution}</span>
+            <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">红外载荷分辨率</span>
+              <span className="text-[10px] 2xl:text-[11px] font-bold text-sky-400 font-mono">{activeSatellite.payload.infraredResolution}</span>
             </div>
           </div>
         </MonitorSection>
 
         {/* 模型情况 */}
         <MonitorSection
-          icon={<Layers className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+          icon={<Layers className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-amber-400 shrink-0" />}
           label="模型情况"
-          badge={<span className="text-[10px] font-bold text-slate-400">{activeSatellite.models.length} 个</span>}
+          badge={<span className="text-[9px] 2xl:text-[10px] font-bold text-slate-400">{activeSatellite.models.length} 个</span>}
           open={modelOpen}
           onToggle={() => setModelOpen((v) => !v)}
         >
           <div className="rounded-lg border border-white/10 overflow-hidden">
-            <div className="grid grid-cols-[1fr_auto] gap-2 px-2.5 py-1.5 bg-white/5 text-[10px] font-bold text-slate-400">
+            <div className="grid grid-cols-[1fr_auto] gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 bg-white/5 text-[9px] 2xl:text-[10px] font-bold text-slate-400">
               <span>名称</span>
               <span>版本</span>
             </div>
             <div className="divide-y divide-white/5">
               {activeSatellite.models.map((m) => (
-                <div key={m.name} className="grid grid-cols-[1fr_auto] gap-2 px-2.5 py-1.5">
-                  <span className="text-[11px] font-semibold text-slate-200 truncate">{m.name}</span>
-                  <span className="text-[11px] font-mono text-slate-400">{m.version}</span>
+                <div key={m.name} className="grid grid-cols-[1fr_auto] gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5">
+                  <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{m.name}</span>
+                  <span className="text-[10px] 2xl:text-[11px] font-mono text-slate-400">{m.version}</span>
                 </div>
               ))}
             </div>
@@ -1830,40 +1830,40 @@ function SatelliteDashboardCard({
 
         {/* 数据情况 */}
         <MonitorSection
-          icon={<Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+          icon={<Database className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-emerald-400 shrink-0" />}
           label="数据情况"
           open={dataOpen}
           onToggle={() => setDataOpen((v) => !v)}
         >
-          <div className="grid grid-cols-2 gap-2">
-            <div className="px-2.5 py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[10px] text-slate-400">数据景数</div>
-              <div className="text-sm font-bold text-emerald-400 font-mono">{activeSatellite.dataStats.sceneCount} 景</div>
+          <div className="grid grid-cols-2 gap-1.5 2xl:gap-2">
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">数据景数</div>
+              <div className="text-xs 2xl:text-sm font-bold text-emerald-400 font-mono">{activeSatellite.dataStats.sceneCount} 景</div>
             </div>
-            <div className="px-2.5 py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[10px] text-slate-400">数据总量</div>
-              <div className="text-sm font-bold text-emerald-400 font-mono">{activeSatellite.dataStats.sizeGB.toFixed(1)} GB</div>
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">数据总量</div>
+              <div className="text-xs 2xl:text-sm font-bold text-emerald-400 font-mono">{activeSatellite.dataStats.sizeGB.toFixed(1)} GB</div>
             </div>
           </div>
         </MonitorSection>
 
         {/* 资源占用 */}
         <MonitorSection
-          icon={<Cpu className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
+          icon={<Cpu className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-rose-400 shrink-0" />}
           label="资源占用"
           open={usageOpen}
           onToggle={() => setUsageOpen((v) => !v)}
         >
-          <div className="space-y-2.5">
+          <div className="space-y-1.5 2xl:space-y-2.5">
             {[
               { label: 'GPU 占用', value: activeSatellite.usage.gpu, colorClass: 'bg-sky-500' },
               { label: 'CPU 占用', value: activeSatellite.usage.cpu, colorClass: 'bg-violet-500' },
               { label: '磁盘用量', value: activeSatellite.usage.disk, colorClass: 'bg-amber-500' },
             ].map((row) => (
               <div key={row.label}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-semibold text-slate-300">{row.label}</span>
-                  <span className="text-[11px] font-bold text-slate-100 font-mono">{row.value}%</span>
+                <div className="flex items-center justify-between mb-0.5 2xl:mb-1">
+                  <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">{row.label}</span>
+                  <span className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 font-mono">{row.value}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
                   <div className={`h-full rounded-full ${row.colorClass}`} style={{ width: `${row.value}%` }} />
@@ -1880,11 +1880,11 @@ function SatelliteDashboardCard({
   }
 
   return (
-    <div className="w-64 sm:w-72 lg:w-80 2xl:w-72 max-h-[calc(100vh-5rem)] sm:max-h-[calc(100vh-6rem)] bg-black/55 border border-white/15 rounded-2xl shadow-xl backdrop-blur-xl flex flex-col text-left select-none animate-fadeIn relative z-30 overflow-hidden">
-      <div className="p-3.5 px-4 border-b border-white/10 bg-white/5 flex items-center justify-between rounded-t-2xl shrink-0">
-        <div className="flex items-center gap-2">
-          <SatelliteIcon className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-          <span className="font-bold text-xs text-slate-100">卫星数据</span>
+    <div className="w-60 sm:w-64 lg:w-72 2xl:w-80 max-h-[calc(100vh-4.5rem)] sm:max-h-[calc(100vh-5.5rem)] 2xl:max-h-[calc(100vh-6rem)] bg-black/60 border border-white/15 rounded-xl sm:rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col text-left select-none animate-fadeIn relative z-30 overflow-hidden">
+      <div className="p-2.5 px-3 2xl:p-3.5 2xl:px-4 border-b border-white/10 bg-white/5 flex items-center justify-between rounded-t-xl sm:rounded-t-2xl shrink-0">
+        <div className="flex items-center gap-1.5 2xl:gap-2">
+          <SatelliteIcon className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />
+          <span className="font-bold text-[11px] 2xl:text-xs text-slate-100">卫星数据</span>
         </div>
 
         <button
@@ -1892,7 +1892,7 @@ function SatelliteDashboardCard({
           className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           title="折叠面板"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
         </button>
       </div>
 

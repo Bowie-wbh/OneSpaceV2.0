@@ -712,36 +712,43 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
     );
   };
 
-  // 添加环绕地球的卫星轨道圆环与实时卫星图标 (基于真实 TLE 根数，SGP4 模型解算)
+  // 添加环绕地球的卫星空间惯性轨道圆环与实时卫星图标 (ECI 地心惯性坐标系动力学解算)
   const addSatelliteOrbit = (viewer: any) => {
     const satrec = satellite.twoline2satrec(SATELLITE_TLE_LINE1, SATELLITE_TLE_LINE2);
     satelliteSatrecRef.current = satrec;
 
-    // 依据平均运动解算轨道周期 (分钟)，沿完整周期均匀采样描绘 3D 轨道圆环
+    // 依据平均运动解算轨道周期 (分钟)
     const meanMotionRevPerDay = satrec.no * (1440 / (2 * Math.PI));
     const orbitalPeriodMinutes = 1440 / meanMotionRevPerDay;
-    const sampleCount = 180;
-    const epoch = new Date();
+    const sampleCount = 200;
 
-    const orbitPositions: any[] = [];
-    for (let i = 0; i <= sampleCount; i += 1) {
-      const t = new Date(epoch.getTime() + (i / sampleCount) * orbitalPeriodMinutes * 60000);
-      const pv = satellite.propagate(satrec, t);
-      if (!pv.position || typeof pv.position === 'boolean') continue;
-      const gmst = satellite.gstime(t);
-      const geodetic = satellite.eciToGeodetic(pv.position, gmst);
-      const lon = satellite.degreesLong(geodetic.longitude);
-      const lat = satellite.degreesLat(geodetic.latitude);
-      const height = geodetic.height * 1000;
-      orbitPositions.push(Cesium.Cartesian3.fromDegrees(lon, lat, height));
-    }
+    // 计算当前时刻下的惯性空间轨道环 (在当前瞬间惯性参考系 ECI 下解算整个轨道闭合椭圆，并投影到当前地球视口中)
+    const computeInertialOrbitPositions = (currentDate: Date) => {
+      const gmst = satellite.gstime(currentDate);
+      const positions: any[] = [];
+      for (let i = 0; i < sampleCount; i++) {
+        const t = new Date(currentDate.getTime() + (i / sampleCount) * orbitalPeriodMinutes * 60000);
+        const pv = satellite.propagate(satrec, t);
+        if (!pv.position || typeof pv.position === 'boolean') continue;
+        const ecf = satellite.eciToEcf(pv.position, gmst);
+        positions.push(new Cesium.Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000));
+      }
+      if (positions.length > 0) {
+        positions.push(positions[0]); // 完美平滑闭合轨道圆环
+      }
+      return positions;
+    };
 
+    // 惯性轨道空间圆环：基于当前时刻 ECI 惯性轨道平面解算，随地球自转平滑动态更新
     satelliteOrbitEntityRef.current = viewer.entities.add({
       id: 'satellite-orbit-ring',
+      name: `${SATELLITE_NORAD_ID} 惯性空间轨道`,
       polyline: {
-        positions: orbitPositions,
+        positions: new Cesium.CallbackProperty(() => {
+          return computeInertialOrbitPositions(new Date());
+        }, false),
         width: 1.5,
-        material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.55),
+        material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.65),
         arcType: Cesium.ArcType.NONE,
       },
     });
@@ -749,6 +756,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
     satelliteNormalUrlRef.current = createSatelliteMarkerCanvas(false);
     satelliteSelectedUrlRef.current = createSatelliteMarkerCanvas(true);
 
+    // 卫星实时星体位置：基于 ECI 惯性坐标动力学严格解算
     satelliteEntityRef.current = viewer.entities.add({
       id: `satellite-${SATELLITE_NORAD_ID}`,
       name: SATELLITE_NORAD_ID,
@@ -757,11 +765,8 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
         const pv = satellite.propagate(satrec, now);
         if (!pv.position || typeof pv.position === 'boolean') return undefined;
         const gmst = satellite.gstime(now);
-        const geodetic = satellite.eciToGeodetic(pv.position, gmst);
-        const lon = satellite.degreesLong(geodetic.longitude);
-        const lat = satellite.degreesLat(geodetic.latitude);
-        const height = geodetic.height * 1000;
-        return Cesium.Cartesian3.fromDegrees(lon, lat, height);
+        const ecf = satellite.eciToEcf(pv.position, gmst);
+        return new Cesium.Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
       }, false),
       billboard: {
         image: satelliteNormalUrlRef.current,
