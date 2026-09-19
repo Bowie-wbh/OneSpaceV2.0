@@ -319,53 +319,101 @@ function MapPointScreenTracker({
   return null;
 }
 
-// ── 卫星 TLE 轨道根数 (SCS-04-16 与 3D 仿真地球完全统一) ───────────────────
-const SCS0416_TLE_LINE1 = '1 A0146U 26170D   26258.45368718  .00001470  00000-0  10013-3 0  9992';
-const SCS0416_TLE_LINE2 = '2 A0146  97.5574 264.3793 0016697  96.5992 263.7138 15.07721651  8062';
+// ── 2D 卫星地图 Marker 图标生成 (支持全星座 12 颗计算星 + SCS-04-16，与 3D 视觉和高亮完全一致) ──
+const _satelliteIconCache: Record<string, L.DivIcon> = {};
 
-// 依据真实 SGP4 轨道动力学模型计算 SCS-04-16 在地心惯性坐标系（ECI）在当前瞬间参考系下的 2D 投影折线段
-function calculateSCS0416GroundTrack(currentTime = new Date()): [number, number][][] {
-  const satrec = satellite.twoline2satrec(SCS0416_TLE_LINE1, SCS0416_TLE_LINE2);
-  const meanMotionRevPerDay = satrec.no * (1440 / (2 * Math.PI));
-  const orbitalPeriodMinutes = 1440 / meanMotionRevPerDay;
-  const sampleCount = 360;
-  const gmst = satellite.gstime(currentTime);
+function createSatelliteConstellationIcon(sat: ConstellationSatelliteItem, isSelected: boolean) {
+  const cacheKey = `${sat.id}-${isSelected ? 'sel' : 'norm'}`;
+  if (_satelliteIconCache[cacheKey]) return _satelliteIconCache[cacheKey];
 
-  const segments: [number, number][][] = [];
-  let currentSegment: [number, number][] = [];
-  let prevLng: number | null = null;
+  const isMain = sat.id === 'scs-04-16';
+  const mainColor = isSelected ? '#38bdf8' : (isMain ? '#38bdf8' : '#0ea5e9');
+  const glowColor = isSelected ? 'rgba(56,189,248,0.7)' : (isMain ? 'rgba(56,189,248,0.45)' : 'rgba(14,165,233,0.3)');
+  const borderStyle = isSelected ? '2px solid #38bdf8' : '1.5px solid rgba(56,189,248,0.7)';
+  const bgStyle = isSelected ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.85)';
+  const size = isSelected ? 36 : (isMain ? 32 : 28);
+  const iconBoxSize = isSelected ? 26 : (isMain ? 22 : 20);
 
-  for (let i = 0; i <= sampleCount; i++) {
-    const t = new Date(currentTime.getTime() + (i / sampleCount) * orbitalPeriodMinutes * 60000);
-    const pv = satellite.propagate(satrec, t);
-    if (!pv.position || typeof pv.position === 'boolean') continue;
-    const geodetic = satellite.eciToGeodetic(pv.position, gmst);
-    const lng = satellite.degreesLong(geodetic.longitude);
-    const lat = satellite.degreesLat(geodetic.latitude);
+  const html = `
+    <div style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+      ${isSelected || isMain ? `<div style="position:absolute;width:${size - 4}px;height:${size - 4}px;border-radius:50%;background:${glowColor};filter:blur(3px);animation:pulse 2s infinite;"></div>` : ''}
+      <div style="position:absolute;width:${iconBoxSize}px;height:${iconBoxSize}px;border-radius:7px;background:${bgStyle};border:${borderStyle};display:flex;align-items:center;justify-content:center;box-shadow:0 0 ${isSelected ? 12 : 6}px ${glowColor};transition:all 0.2s;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="${iconBoxSize - 10}" height="${iconBoxSize - 10}" viewBox="0 0 24 24" fill="none" stroke="${mainColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 7 9 3 5 7l4 4"/>
+          <path d="m17 11 4 4-4 4-4-4"/>
+          <path d="m8 12 4 4 6-6-4-4Z"/>
+          <path d="m16 8 3-3"/>
+          <path d="M9 21a6 6 0 0 0-6-6"/>
+        </svg>
+      </div>
+      ${isSelected || isMain ? `
+      <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:1px 5px;border-radius:4px;background:rgba(15,23,42,0.9);border:1px solid ${isSelected ? '#38bdf8' : 'rgba(56,189,248,0.4)'};color:${isSelected ? '#38bdf8' : '#e0f2fe'};font-size:10px;font-weight:bold;font-family:monospace;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+        ${sat.code}
+      </div>` : ''}
+    </div>
+  `;
 
-    // 跨越 +/- 180° 日界线时断开航带折线，避免横穿整张地图的拉线伪影
-    if (prevLng !== null && Math.abs(lng - prevLng) > 180) {
-      if (currentSegment.length > 0) {
-        segments.push(currentSegment);
-        currentSegment = [];
-      }
-    }
-
-    currentSegment.push([lat, lng]);
-    prevLng = lng;
-  }
-
-  if (currentSegment.length > 0) {
-    segments.push(currentSegment);
-  }
-
-  return segments;
+  const divIcon = L.divIcon({
+    html,
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  });
+  _satelliteIconCache[cacheKey] = divIcon;
+  return divIcon;
 }
 
-// 依据实时时钟计算 SCS-04-16 当前惯性坐标星位经纬度
-function getSCS0416CurrentPosition(currentTime = new Date()): { lat: number; lng: number } {
+// 依据真实 SGP4 轨道动力学模型计算单个卫星在当前瞬间参考系下的 2D 投影折线段
+function calculateSatelliteGroundTrack(satItem: ConstellationSatelliteItem, currentTime = new Date()): [number, number][][] {
   try {
-    const satrec = satellite.twoline2satrec(SCS0416_TLE_LINE1, SCS0416_TLE_LINE2);
+    const satrec = satellite.twoline2satrec(satItem.line1, satItem.line2);
+    if (satrec.error) return [];
+    const meanMotionRevPerDay = satrec.no * (1440 / (2 * Math.PI));
+    const orbitalPeriodMinutes = 1440 / meanMotionRevPerDay;
+    const sampleCount = 240;
+    const gmst = satellite.gstime(currentTime);
+
+    const segments: [number, number][][] = [];
+    let currentSegment: [number, number][] = [];
+    let prevLng: number | null = null;
+
+    for (let i = 0; i <= sampleCount; i++) {
+      const t = new Date(currentTime.getTime() + (i / sampleCount) * orbitalPeriodMinutes * 60000);
+      const pv = satellite.propagate(satrec, t);
+      if (!pv.position || typeof pv.position === 'boolean') continue;
+      const geodetic = satellite.eciToGeodetic(pv.position, gmst);
+      const lng = satellite.degreesLong(geodetic.longitude);
+      const lat = satellite.degreesLat(geodetic.latitude);
+
+      // 跨越 +/- 180° 日界线时断开航带折线，避免横穿整张地图的拉线伪影
+      if (prevLng !== null && Math.abs(lng - prevLng) > 180) {
+        if (currentSegment.length > 0) {
+          segments.push(currentSegment);
+          currentSegment = [];
+        }
+      }
+
+      currentSegment.push([lat, lng]);
+      prevLng = lng;
+    }
+
+    if (currentSegment.length > 0) {
+      segments.push(currentSegment);
+    }
+
+    return segments;
+  } catch (err) {
+    console.error('Error calculating satellite ground track:', err);
+    return [];
+  }
+}
+
+// 依据实时时钟计算任意卫星当前惯性坐标星位经纬度
+function getSatelliteCurrentPosition(satItem: ConstellationSatelliteItem, currentTime = new Date()): { lat: number; lng: number } | null {
+  try {
+    const satrec = satellite.twoline2satrec(satItem.line1, satItem.line2);
+    if (satrec.error) return null;
     const pv = satellite.propagate(satrec, currentTime);
     if (pv.position && typeof pv.position !== 'boolean') {
       const gmst = satellite.gstime(currentTime);
@@ -378,44 +426,7 @@ function getSCS0416CurrentPosition(currentTime = new Date()): { lat: number; lng
   } catch (err) {
     console.error('Error computing satellite position:', err);
   }
-  return { lat: 27.9536, lng: 109.6015 };
-}
-
-// ── 2D 卫星地图 Marker 图标生成 (专为 SCS-04-16 定制) ─────────────────────────
-let _scs0416IconCache: L.DivIcon | null = null;
-
-function createSCS0416SatelliteIcon() {
-  if (_scs0416IconCache) return _scs0416IconCache;
-
-  const mainColor = '#38bdf8';
-  const glowColor = 'rgba(56,189,248,0.6)';
-
-  const html = `
-    <div style="position:relative;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-      <div style="position:absolute;width:28px;height:28px;border-radius:50%;background:${glowColor};filter:blur(3px);animation:pulse 2s infinite;"></div>
-      <div style="position:absolute;width:24px;height:24px;border-radius:8px;background:rgba(15,23,42,0.92);border:1.5px solid ${mainColor};display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px ${glowColor};">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${mainColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M13 7 9 3 5 7l4 4"/>
-          <path d="m17 11 4 4-4 4-4-4"/>
-          <path d="m8 12 4 4 6-6-4-4Z"/>
-          <path d="m16 8 3-3"/>
-          <path d="M9 21a6 6 0 0 0-6-6"/>
-        </svg>
-      </div>
-      <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:1px 5px;border-radius:4px;background:rgba(15,23,42,0.85);border:1px solid ${mainColor}40;color:#f8fafc;font-size:10px;font-weight:bold;font-family:monospace;pointer-events:none;">
-        SCS-04-16
-      </div>
-    </div>
-  `;
-
-  _scs0416IconCache = L.divIcon({
-    html,
-    className: '',
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -18],
-  });
-  return _scs0416IconCache;
+  return null;
 }
 
 // ── 遥感图文详情弹窗组件 ───────────────────────────────────────────────────
@@ -961,14 +972,12 @@ function AnimatedNumber({ value, formatter }: { value: number; formatter?: (n: n
 
 // ── 折叠式子模块容器：监控卡内部各模块共用的可收起分区 ─────────────────────────
 function MonitorSection({
-  icon,
   label,
   badge,
   open,
   onToggle,
   children,
 }: {
-  icon: React.ReactNode;
   label: string;
   badge?: React.ReactNode;
   open: boolean;
@@ -976,17 +985,25 @@ function MonitorSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-t border-white/10 first:border-t-0">
+    <div className="border-t border-white/[0.08] first:border-t-0">
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-1.5 2xl:gap-2 px-2.5 py-1.5 2xl:px-3.5 2xl:py-2.5 hover:bg-white/5 transition-colors cursor-pointer"
+        className="group w-full flex items-center justify-between px-3 py-2.5 2xl:px-3.5 2xl:py-3 hover:bg-white/[0.04] transition-all duration-200 cursor-pointer text-left select-none"
       >
-        {icon}
-        <span className="text-[11px] 2xl:text-xs font-bold text-slate-200 flex-1 text-left">{label}</span>
-        {badge}
-        <ChevronDown className={`w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-slate-400 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`} />
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className={`w-1 h-3 rounded-full transition-all duration-200 ${open ? 'bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)]' : 'bg-transparent group-hover:bg-white/20'}`} />
+          <span className="text-[12px] 2xl:text-[13px] font-semibold text-slate-200 group-hover:text-white tracking-wide transition-colors truncate">
+            {label}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {badge}
+          <div className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 group-hover:text-slate-200 group-hover:bg-white/5 transition-all">
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-0 text-sky-400' : '-rotate-90'}`} />
+          </div>
+        </div>
       </button>
-      {open && <div className="px-2.5 pb-2.5 2xl:px-3.5 2xl:pb-3.5 space-y-1.5 2xl:space-y-2 animate-fadeIn">{children}</div>}
+      {open && <div className="px-3 pb-3 2xl:px-3.5 2xl:pb-3.5 space-y-1.5 2xl:space-y-2 animate-fadeIn">{children}</div>}
     </div>
   );
 }
@@ -1011,6 +1028,8 @@ interface MonitorCardProps {
   onToggleBuildingSpatial: () => void;
   selectedSpatialPointId: string | null;
   onSelectSpatialPoint: (point: SpatialMarkerPoint | null) => void;
+  monitorActiveTab?: 'spatial' | 'satellite';
+  onMonitorTabChange?: (tab: 'spatial' | 'satellite') => void;
 }
 
 function MonitorCard({
@@ -1034,9 +1053,17 @@ function MonitorCard({
   onSelectSpatialPoint,
   selectedSatelliteId,
   onSelectSatelliteId,
+  monitorActiveTab,
+  onMonitorTabChange,
 }: MonitorCardProps & { selectedSatelliteId?: string; onSelectSatelliteId?: (id: string) => void }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'spatial' | 'satellite'>('spatial');
+  const [internalActiveTab, setInternalActiveTab] = useState<'spatial' | 'satellite'>('spatial');
+  const activeTab = monitorActiveTab ?? internalActiveTab;
+  const setActiveTab = (tab: 'spatial' | 'satellite') => {
+    setInternalActiveTab(tab);
+    onMonitorTabChange?.(tab);
+  };
+
   const [isSpatialCategoryOpen, setIsSpatialCategoryOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -1047,31 +1074,29 @@ function MonitorCard({
   const [coordOpen, setCoordOpen] = useState(true);
   const [payloadOpen, setPayloadOpen] = useState(true);
   const [modelOpen, setModelOpen] = useState(true);
-  const [dataOpen, setDataOpen] = useState(true);
   const [usageOpen, setUsageOpen] = useState(true);
 
   const satId = selectedSatelliteId || 'scs-04-16';
   const activeSatellite = SATELLITE_DASHBOARD_LIST.find((s) => s.id === satId) ?? SATELLITE_DASHBOARD_LIST[0];
 
-  const [coord, setCoord] = useState<{ x: number; y: number; z: number; direction: 'N' | 'S' }>({
-    x: 0, y: 0, z: 0, direction: 'N',
+  // 卫星轨道经纬度与高度：基于真实 TLE 实时解算大地坐标系参数（经度、纬度、高度）
+  const [orbitPos, setOrbitPos] = useState<{ lng: number; lat: number; height: number }>({
+    lng: 0, lat: 0, height: 0,
   });
 
   useEffect(() => {
-    if (satId !== 'scs-04-16') {
-      setCoord({ x: 4821.3, y: -3654.8, z: 2790.1, direction: 'N' });
-      return;
-    }
-    const satrec = satellite.twoline2satrec(SCS0416_TLE_LINE1, SCS0416_TLE_LINE2);
+    const targetSat = SATELLITE_DASHBOARD_LIST.find((s) => s.id === satId) ?? SATELLITE_DASHBOARD_LIST[0];
+    const satrec = satellite.twoline2satrec(targetSat.line1, targetSat.line2);
     const update = () => {
       const now = new Date();
       const pv = satellite.propagate(satrec, now);
-      if (pv.position && typeof pv.position !== 'boolean' && pv.velocity && typeof pv.velocity !== 'boolean') {
-        setCoord({
-          x: pv.position.x,
-          y: pv.position.y,
-          z: pv.position.z,
-          direction: pv.velocity.z >= 0 ? 'N' : 'S',
+      if (pv.position && typeof pv.position !== 'boolean') {
+        const gmst = satellite.gstime(now);
+        const geodetic = satellite.eciToGeodetic(pv.position, gmst);
+        setOrbitPos({
+          lng: satellite.degreesLong(geodetic.longitude),
+          lat: satellite.degreesLat(geodetic.latitude),
+          height: geodetic.height, // 单位 km
         });
       }
     };
@@ -1323,7 +1348,6 @@ function MonitorCard({
 
         {/* 模块三：当前任务 —— 当前执行周期 + 进度同步（默认今日，支持按天筛选）；默认展示，无任务/无历史周期时显示空状态，可折叠 */}
         <MonitorSection
-          icon={<Activity className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
           label="当前任务"
           badge={isRunning && !sync?.cycleFinished ? (
             <span className="px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold bg-sky-400/20 text-sky-200 border border-sky-400/40">执行中</span>
@@ -1579,55 +1603,8 @@ function MonitorCard({
 );
 }
 
-// ── 卫星数据看板：卫星筛选、坐标、载荷信息、模型部署、数据与资源占用情况，整体可收起 ──
-interface SatelliteDashboardEntry {
-  id: string;
-  code: string;
-  name: string;
-  payload: { aiCompute: string; routeSpeed: string; laserSpeed: string; infraredResolution: string };
-  models: { name: string; version: string }[];
-  dataStats: { sceneCount: number; sizeGB: number };
-  usage: { gpu: number; cpu: number; disk: number };
-}
-
-const SATELLITE_DASHBOARD_LIST: SatelliteDashboardEntry[] = [
-  {
-    id: 'scs-04-16',
-    code: 'SCS-04-16',
-    name: '云尖沐曦号',
-    payload: { aiCompute: '248 TOPS', routeSpeed: '10 Gbps', laserSpeed: '100 Gbps', infraredResolution: '120 m' },
-    models: [
-      { name: '云检测模型', version: 'v3.2.1' },
-      { name: '火灾检测模型', version: 'v2.8.0' },
-      { name: '几何校正模型', version: 'v1.5.4' },
-    ],
-    dataStats: { sceneCount: 128, sizeGB: 342.6 },
-    usage: { gpu: 68, cpu: 45, disk: 57 },
-  },
-  {
-    id: 'scs-04-15',
-    code: 'SCS-04-15',
-    name: '之江天目01号',
-    payload: { aiCompute: '186 TOPS', routeSpeed: '8 Gbps', laserSpeed: '80 Gbps', infraredResolution: '150 m' },
-    models: [
-      { name: '云检测模型', version: 'v3.1.0' },
-      { name: '目标识别模型', version: 'v2.2.3' },
-    ],
-    dataStats: { sceneCount: 96, sizeGB: 251.4 },
-    usage: { gpu: 52, cpu: 38, disk: 44 },
-  },
-  {
-    id: 'scs-04-14',
-    code: 'SCS-04-14',
-    name: '天工探索二号',
-    payload: { aiCompute: '160 TOPS', routeSpeed: '8 Gbps', laserSpeed: '60 Gbps', infraredResolution: '180 m' },
-    models: [
-      { name: 'SAR 成像模型', version: 'v1.9.2' },
-    ],
-    dataStats: { sceneCount: 74, sizeGB: 198.7 },
-    usage: { gpu: 41, cpu: 33, disk: 39 },
-  },
-];
+// ── 卫星数据看板：与星座全量数据 SATELLITE_CONSTELLATION_ITEMS 同步 ──
+const SATELLITE_DASHBOARD_LIST: ConstellationSatelliteItem[] = SATELLITE_CONSTELLATION_ITEMS;
 
 function SatelliteDashboardCard({
   selectedId,
@@ -1643,31 +1620,28 @@ function SatelliteDashboardCard({
   const [coordOpen, setCoordOpen] = useState(true);
   const [payloadOpen, setPayloadOpen] = useState(true);
   const [modelOpen, setModelOpen] = useState(true);
-  const [dataOpen, setDataOpen] = useState(true);
   const [usageOpen, setUsageOpen] = useState(true);
 
   const activeSatellite = SATELLITE_DASHBOARD_LIST.find((s) => s.id === selectedId) ?? SATELLITE_DASHBOARD_LIST[0];
 
-  // 卫星坐标：默认卫星 SCS-04-16 使用真实 TLE 实时解算 ECI 坐标，其余卫星展示其档案静态基准坐标
-  const [coord, setCoord] = useState<{ x: number; y: number; z: number; direction: 'N' | 'S' }>({
-    x: 0, y: 0, z: 0, direction: 'N',
+  // 卫星轨道经纬度与高度：基于真实 TLE 实时解算大地坐标系参数（经度、纬度、高度）
+  const [orbitPos, setOrbitPos] = useState<{ lng: number; lat: number; height: number }>({
+    lng: 0, lat: 0, height: 0,
   });
 
   useEffect(() => {
-    if (selectedId !== 'scs-04-16') {
-      setCoord({ x: 4821.3, y: -3654.8, z: 2790.1, direction: 'N' });
-      return;
-    }
-    const satrec = satellite.twoline2satrec(SCS0416_TLE_LINE1, SCS0416_TLE_LINE2);
+    const targetSat = SATELLITE_DASHBOARD_LIST.find((s) => s.id === selectedId) ?? SATELLITE_DASHBOARD_LIST[0];
+    const satrec = satellite.twoline2satrec(targetSat.line1, targetSat.line2);
     const update = () => {
       const now = new Date();
       const pv = satellite.propagate(satrec, now);
-      if (pv.position && typeof pv.position !== 'boolean' && pv.velocity && typeof pv.velocity !== 'boolean') {
-        setCoord({
-          x: pv.position.x,
-          y: pv.position.y,
-          z: pv.position.z,
-          direction: pv.velocity.z >= 0 ? 'N' : 'S',
+      if (pv.position && typeof pv.position !== 'boolean') {
+        const gmst = satellite.gstime(now);
+        const geodetic = satellite.eciToGeodetic(pv.position, gmst);
+        setOrbitPos({
+          lng: satellite.degreesLong(geodetic.longitude),
+          lat: satellite.degreesLat(geodetic.latitude),
+          height: geodetic.height, // 单位 km
         });
       }
     };
@@ -1749,43 +1723,39 @@ function SatelliteDashboardCard({
           </div>
         </div>
 
-        {/* 卫星坐标 (ECI 惯性坐标系) */}
+        {/* 轨道信息 (经度、纬度、高度) */}
         <MonitorSection
-          icon={<Compass className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />}
-          label="惯性坐标 (ECI)"
+          label="轨道信息"
           open={coordOpen}
           onToggle={() => setCoordOpen((v) => !v)}
         >
           <div className="grid grid-cols-2 gap-1.5 2xl:gap-2">
             <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[9px] 2xl:text-[10px] text-slate-400">X (ECI)</div>
-              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{coord.x.toFixed(1)} km</div>
-            </div>
-            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[9px] 2xl:text-[10px] text-slate-400">Y (ECI)</div>
-              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{coord.y.toFixed(1)} km</div>
-            </div>
-            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[9px] 2xl:text-[10px] text-slate-400">Z (ECI)</div>
-              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{coord.z.toFixed(1)} km</div>
-            </div>
-            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
-              <div>
-                <div className="text-[9px] 2xl:text-[10px] text-slate-400">惯性方向</div>
-                <div className="text-[11px] 2xl:text-xs font-bold text-slate-100">{coord.direction === 'N' ? '北向 (N)' : '南向 (S)'}</div>
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">经度</div>
+              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">
+                {Math.abs(orbitPos.lng).toFixed(2)}° {orbitPos.lng >= 0 ? 'E' : 'W'}
               </div>
-              {coord.direction === 'N' ? (
-                <ArrowUp className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-emerald-400" />
-              ) : (
-                <ArrowDown className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-amber-400" />
-              )}
+            </div>
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">纬度</div>
+              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">
+                {Math.abs(orbitPos.lat).toFixed(2)}° {orbitPos.lat >= 0 ? 'N' : 'S'}
+              </div>
+            </div>
+            <div className="col-span-2 px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+              <div>
+                <div className="text-[9px] 2xl:text-[10px] text-slate-400">高度</div>
+                <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{orbitPos.height.toFixed(1)} km</div>
+              </div>
+              <span className="text-[9px] 2xl:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30">
+                实时轨道
+              </span>
             </div>
           </div>
         </MonitorSection>
 
         {/* 载荷信息 */}
         <MonitorSection
-          icon={<Radio className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-violet-400 shrink-0" />}
           label="载荷信息"
           open={payloadOpen}
           onToggle={() => setPayloadOpen((v) => !v)}
@@ -1812,7 +1782,6 @@ function SatelliteDashboardCard({
 
         {/* 模型情况 */}
         <MonitorSection
-          icon={<Layers className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-amber-400 shrink-0" />}
           label="模型情况"
           badge={<span className="text-[9px] 2xl:text-[10px] font-bold text-slate-400">{activeSatellite.models.length} 个</span>}
           open={modelOpen}
@@ -1834,28 +1803,8 @@ function SatelliteDashboardCard({
           </div>
         </MonitorSection>
 
-        {/* 数据情况 */}
-        <MonitorSection
-          icon={<Database className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-emerald-400 shrink-0" />}
-          label="数据情况"
-          open={dataOpen}
-          onToggle={() => setDataOpen((v) => !v)}
-        >
-          <div className="grid grid-cols-2 gap-1.5 2xl:gap-2">
-            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[9px] 2xl:text-[10px] text-slate-400">数据景数</div>
-              <div className="text-xs 2xl:text-sm font-bold text-emerald-400 font-mono">{activeSatellite.dataStats.sceneCount} 景</div>
-            </div>
-            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
-              <div className="text-[9px] 2xl:text-[10px] text-slate-400">数据总量</div>
-              <div className="text-xs 2xl:text-sm font-bold text-emerald-400 font-mono">{activeSatellite.dataStats.sizeGB.toFixed(1)} GB</div>
-            </div>
-          </div>
-        </MonitorSection>
-
         {/* 资源占用 */}
         <MonitorSection
-          icon={<Cpu className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-rose-400 shrink-0" />}
           label="资源占用"
           open={usageOpen}
           onToggle={() => setUsageOpen((v) => !v)}
@@ -2618,6 +2567,14 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
   const [pointScreenPos, setPointScreenPos] = useState<{ x: number; y: number } | null>(null);
   // 卫星数据看板当前展示的卫星：地球（2D/3D）上点击卫星图标或看板下拉筛选均可切换
   const [selectedSatelliteCode, setSelectedSatelliteCode] = useState<string>('scs-04-16');
+  // 右上角监控卡当前激活的子 Tab（'spatial' 空间要素 | 'satellite' 卫星数据）
+  const [monitorActiveTab, setMonitorActiveTab] = useState<'spatial' | 'satellite'>('spatial');
+
+  // 处理点击卫星时的统一联动逻辑：设置当前卫星并自动切换到「卫星数据」看板
+  const handleSelectSatellite = useCallback((satId: string) => {
+    setSelectedSatelliteCode(satId);
+    setMonitorActiveTab('satellite');
+  }, []);
 
   // 2D 昼夜光照切换（改变地图样式滤镜）
   const [isDaylight2D, setIsDaylight2D] = useState<boolean>(true);
@@ -2930,7 +2887,9 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
               else setSelectedSpatialPoint(null);
             }}
             selectedSatelliteId={selectedSatelliteCode}
-            onSelectSatelliteId={setSelectedSatelliteCode}
+            onSelectSatelliteId={handleSelectSatellite}
+            monitorActiveTab={monitorActiveTab}
+            onMonitorTabChange={setMonitorActiveTab}
           />
         </div>
 
@@ -2954,7 +2913,8 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
               onPointScreenPositionChange={setPointScreenPos}
               viewDimension={viewDimension}
               onToggleDimension={() => setViewDimension('2d')}
-              onSelectSatellite={() => setSelectedSatelliteCode('scs-04-16')}
+              selectedSatelliteId={selectedSatelliteCode}
+              onSelectSatellite={handleSelectSatellite}
             />
 
             {/* 地球放大后从小圆点延伸出的空间遥感数据处理级别思维导图 */}
@@ -3084,33 +3044,42 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                 onScreenPositionChange={setPointScreenPos}
               />
 
-              {/* 2D 视图下的 SCS-04-16 惯性参考系 (ECI) 实时动力学轨道投影折线 */}
-              {calculateSCS0416GroundTrack(currentSatClock).map((segment, sIdx) => (
-                <Polyline
-                  key={`scs-track-seg-${sIdx}`}
-                  positions={segment}
-                  pathOptions={{
-                    color: '#38bdf8',
-                    weight: 2,
-                    dashArray: '8 6',
-                    opacity: 0.85,
-                  }}
-                />
-              ))}
+              {/* 2D 视图下的全星座卫星空间惯性轨道投影折线与星位 Marker (与 3D 地球完全一致的数据源与动力学解算) */}
+              {SATELLITE_CONSTELLATION_ITEMS.map((satItem) => {
+                const isSelected = satItem.id === selectedSatelliteCode || satItem.code.toLowerCase() === (selectedSatelliteCode || '').toLowerCase();
+                const isMain = satItem.id === 'scs-04-16';
+                const trackSegments = calculateSatelliteGroundTrack(satItem, currentSatClock);
+                const satPos = getSatelliteCurrentPosition(satItem, currentSatClock);
 
-              {/* 2D 视图下的 SCS-04-16 惯性参考系实时位置 Marker */}
-              {(() => {
-                const satPos = getSCS0416CurrentPosition(currentSatClock);
                 return (
-                  <Marker
-                    position={[satPos.lat, satPos.lng]}
-                    icon={createSCS0416SatelliteIcon()}
-                    eventHandlers={{
-                      click: () => setSelectedSatelliteCode('scs-04-16'),
-                    }}
-                  />
+                  <React.Fragment key={`sat-2d-${satItem.id}`}>
+                    {/* 卫星地面投影折线 */}
+                    {trackSegments.map((segment, sIdx) => (
+                      <Polyline
+                        key={`sat-track-${satItem.id}-${sIdx}`}
+                        positions={segment}
+                        pathOptions={{
+                          color: isSelected ? '#38bdf8' : (isMain ? '#38bdf8' : '#0ea5e9'),
+                          weight: isSelected ? 2.2 : (isMain ? 1.6 : 1.2),
+                          dashArray: isSelected ? '8 5' : (isMain ? '8 6' : '4 6'),
+                          opacity: isSelected ? 0.95 : (isMain ? 0.65 : 0.35),
+                        }}
+                      />
+                    ))}
+
+                    {/* 卫星星体 Marker */}
+                    {satPos && (
+                      <Marker
+                        position={[satPos.lat, satPos.lng]}
+                        icon={createSatelliteConstellationIcon(satItem, isSelected)}
+                        eventHandlers={{
+                          click: () => handleSelectSatellite(satItem.id),
+                        }}
+                      />
+                    )}
+                  </React.Fragment>
                 );
-              })()}
+              })}
 
               {/* 2D 地图上叠置的遥感历史脚印多边形 */}
               {activeFootprint && activeFootprint.footprint && (

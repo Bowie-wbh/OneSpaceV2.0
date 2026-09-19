@@ -759,7 +759,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
         },
       });
 
-      // 卫星实时星体位置：基于 ECI 惯性坐标动力学严格解算
+      // 卫星实时星体位置：基于 ECI 惯性坐标动力学严格解算（不禁用深度测试，使卫星运行到地球背面时被地球球体自然遮挡）
       const satEntity = viewer.entities.add({
         id: `satellite-${satItem.id}`,
         name: satItem.code,
@@ -777,7 +777,6 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
           height: 20,
           verticalOrigin: Cesium.VerticalOrigin.CENTER,
           horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
         label: {
           text: satItem.code,
@@ -788,7 +787,6 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           verticalOrigin: Cesium.VerticalOrigin.TOP,
           pixelOffset: new Cesium.Cartesian2(0, 14),
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
           show: false,
         },
       });
