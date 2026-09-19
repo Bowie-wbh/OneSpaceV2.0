@@ -3,8 +3,8 @@ export interface TelemetryItem {
   code: string;
   name: string;
   basis?: string; // 判读依据
-  subsystemKey: SystemKey;
-  subsystemName: string;
+  subsystemKey?: SystemKey;
+  subsystemName?: string;
   channelKey?: 'EPSA1' | 'EPSA2' | 'EPSB1' | 'EPSB2' | 'OBC' | 'ADCS';
   channelLabel?: string;
   value: string;
@@ -59,6 +59,13 @@ export interface AnomalyItem {
   anomalyType: string;
   telemetryCode: string;
   detailSummary: string;
+  symptom?: string; // 异常现象描述
+  actionMeasure?: string; // 处置措施
+  reportData?: {
+    reportTitle: string;
+    findings: string[];
+    actionSuggestions: string[];
+  };
   processStatus: '已处置' | '待复核' | '待处理';
   actionRecord?: {
     handledTime: string;
@@ -190,60 +197,60 @@ export interface SatelliteHealthOverviewData {
 
 // 获取各卫星的概览统计（支持按 今日/本周/本月/历史 动态切换数据）
 export function getSatelliteOverview(satelliteId: string, timeSpan: HealthTimeSpan = 'history'): SatelliteHealthOverviewData {
+  const isHighSpectrum = satelliteId === 'scs-03-14' || satelliteId === 'zj-tm01';
+  const isSarRadar = satelliteId === 'scs-01-06' || satelliteId === 'scs-01-09' || satelliteId === 'tg-02';
+  const isWeatherSat = satelliteId === 'scs-04-15' || satelliteId === 'tx-03';
+
   if (timeSpan === 'today') {
-    switch (satelliteId) {
-      case 'zj-tm01':
-        return { daysInOrbit: 1, totalAnomalies: 1, resolvedAnomalies: 1, manualResolvedAnomalies: 0 };
-      case 'tg-02':
-        return { daysInOrbit: 1, totalAnomalies: 0, resolvedAnomalies: 0, manualResolvedAnomalies: 0 };
-      case 'tx-03':
-        return { daysInOrbit: 1, totalAnomalies: 2, resolvedAnomalies: 1, manualResolvedAnomalies: 1 };
-      case 'yj-mx01':
-      default:
-        return { daysInOrbit: 1, totalAnomalies: 2, resolvedAnomalies: 1, manualResolvedAnomalies: 1 };
+    if (isHighSpectrum) {
+      return { daysInOrbit: 1, totalAnomalies: 1, resolvedAnomalies: 1, manualResolvedAnomalies: 0 };
     }
+    if (isSarRadar) {
+      return { daysInOrbit: 1, totalAnomalies: 0, resolvedAnomalies: 0, manualResolvedAnomalies: 0 };
+    }
+    if (isWeatherSat) {
+      return { daysInOrbit: 1, totalAnomalies: 2, resolvedAnomalies: 1, manualResolvedAnomalies: 1 };
+    }
+    return { daysInOrbit: 1, totalAnomalies: 2, resolvedAnomalies: 1, manualResolvedAnomalies: 1 };
   }
 
   if (timeSpan === 'week') {
-    switch (satelliteId) {
-      case 'zj-tm01':
-        return { daysInOrbit: 7, totalAnomalies: 3, resolvedAnomalies: 2, manualResolvedAnomalies: 1 };
-      case 'tg-02':
-        return { daysInOrbit: 7, totalAnomalies: 1, resolvedAnomalies: 1, manualResolvedAnomalies: 0 };
-      case 'tx-03':
-        return { daysInOrbit: 7, totalAnomalies: 4, resolvedAnomalies: 3, manualResolvedAnomalies: 1 };
-      case 'yj-mx01':
-      default:
-        return { daysInOrbit: 7, totalAnomalies: 4, resolvedAnomalies: 3, manualResolvedAnomalies: 1 };
+    if (isHighSpectrum) {
+      return { daysInOrbit: 7, totalAnomalies: 3, resolvedAnomalies: 2, manualResolvedAnomalies: 1 };
     }
+    if (isSarRadar) {
+      return { daysInOrbit: 7, totalAnomalies: 1, resolvedAnomalies: 1, manualResolvedAnomalies: 0 };
+    }
+    if (isWeatherSat) {
+      return { daysInOrbit: 7, totalAnomalies: 4, resolvedAnomalies: 3, manualResolvedAnomalies: 1 };
+    }
+    return { daysInOrbit: 7, totalAnomalies: 4, resolvedAnomalies: 3, manualResolvedAnomalies: 1 };
   }
 
   if (timeSpan === 'month') {
-    switch (satelliteId) {
-      case 'zj-tm01':
-        return { daysInOrbit: 30, totalAnomalies: 5, resolvedAnomalies: 4, manualResolvedAnomalies: 1 };
-      case 'tg-02':
-        return { daysInOrbit: 30, totalAnomalies: 2, resolvedAnomalies: 2, manualResolvedAnomalies: 0 };
-      case 'tx-03':
-        return { daysInOrbit: 30, totalAnomalies: 9, resolvedAnomalies: 7, manualResolvedAnomalies: 2 };
-      case 'yj-mx01':
-      default:
-        return { daysInOrbit: 30, totalAnomalies: 8, resolvedAnomalies: 6, manualResolvedAnomalies: 2 };
+    if (isHighSpectrum) {
+      return { daysInOrbit: 30, totalAnomalies: 5, resolvedAnomalies: 4, manualResolvedAnomalies: 1 };
     }
+    if (isSarRadar) {
+      return { daysInOrbit: 30, totalAnomalies: 2, resolvedAnomalies: 2, manualResolvedAnomalies: 0 };
+    }
+    if (isWeatherSat) {
+      return { daysInOrbit: 30, totalAnomalies: 9, resolvedAnomalies: 7, manualResolvedAnomalies: 2 };
+    }
+    return { daysInOrbit: 30, totalAnomalies: 8, resolvedAnomalies: 6, manualResolvedAnomalies: 2 };
   }
 
   // 默认历史累计
-  switch (satelliteId) {
-    case 'zj-tm01':
-      return { daysInOrbit: 245, totalAnomalies: 8, resolvedAnomalies: 6, manualResolvedAnomalies: 2 };
-    case 'tg-02':
-      return { daysInOrbit: 89, totalAnomalies: 3, resolvedAnomalies: 2, manualResolvedAnomalies: 1 };
-    case 'tx-03':
-      return { daysInOrbit: 310, totalAnomalies: 15, resolvedAnomalies: 12, manualResolvedAnomalies: 3 };
-    case 'yj-mx01':
-    default:
-      return { daysInOrbit: 168, totalAnomalies: 12, resolvedAnomalies: 9, manualResolvedAnomalies: 2 };
+  if (isHighSpectrum) {
+    return { daysInOrbit: 245, totalAnomalies: 8, resolvedAnomalies: 6, manualResolvedAnomalies: 2 };
   }
+  if (isSarRadar) {
+    return { daysInOrbit: 89, totalAnomalies: 3, resolvedAnomalies: 2, manualResolvedAnomalies: 1 };
+  }
+  if (isWeatherSat) {
+    return { daysInOrbit: 310, totalAnomalies: 15, resolvedAnomalies: 12, manualResolvedAnomalies: 3 };
+  }
+  return { daysInOrbit: 168, totalAnomalies: 12, resolvedAnomalies: 9, manualResolvedAnomalies: 2 };
 }
 
 // 获取各卫星专属的遥测分组数据
@@ -255,7 +262,11 @@ export function getTelemetryDataForSatellite(satelliteId: string, timeFilter = '
       let value = item.value;
       let description = item.description;
 
-      if (satelliteId === 'zj-tm01') {
+      const isHighSpectrum = satelliteId === 'scs-03-14' || satelliteId === 'zj-tm01';
+      const isSarRadar = satelliteId === 'scs-01-06' || satelliteId === 'scs-01-09' || satelliteId === 'tg-02';
+      const isWeatherSat = satelliteId === 'scs-04-15' || satelliteId === 'tx-03';
+
+      if (isHighSpectrum) {
         if (item.code === 'TMEA043') {
           isNormal = true;
           statusText = '正常';
@@ -277,13 +288,13 @@ export function getTelemetryDataForSatellite(satelliteId: string, timeFilter = '
           value = '0.58 A (偏高)';
           description = 'Flash读写峰值电流偏大';
         }
-      } else if (satelliteId === 'tg-02') {
+      } else if (isSarRadar) {
         isNormal = true;
         statusText = '正常';
         if (item.code === 'TMEA043') value = '5.01 V';
         if (item.code === 'TMEA137') value = '23.5 ℃';
         description = undefined;
-      } else if (satelliteId === 'tx-03') {
+      } else if (isWeatherSat) {
         if (item.code === 'TMEA043') {
           isNormal = true;
           statusText = '正常';
@@ -322,6 +333,7 @@ export function getTelemetryDataForSatellite(satelliteId: string, timeFilter = '
     };
   });
 }
+
 // 9个分系统的基础核心遥测字典 (1/2)
 const CORE_TELEMETRIES_DICT_PART1: Record<string, TelemetryItem[]> = {
   thermal: [
@@ -430,8 +442,11 @@ export function getCoreTelemetriesForSubsystem(satelliteId: string, systemKey?: 
 }
 // 获取各卫星的分系统状态
 export function getSubsystemsForSatellite(satelliteId: string): SubsystemStatus[] {
+  const isHighSpectrum = satelliteId === 'scs-03-14' || satelliteId === 'zj-tm01';
+  const isSarRadar = satelliteId === 'scs-01-06' || satelliteId === 'scs-01-09' || satelliteId === 'tg-02';
+  const isWeatherSat = satelliteId === 'scs-04-15' || satelliteId === 'tx-03';
 
-  if (satelliteId === 'tg-02') {
+  if (isSarRadar) {
     return [
       { key: 'thermal', name: '热控', healthLevel: 'healthy', isNormal: true, statusText: '健康', anomalyCounts: { class1: 0, class2: 0, class3: 0 }, summary: '整星热平衡状态优良，多层隔热层完好' },
       { key: 'energy', name: '能源', healthLevel: 'healthy', isNormal: true, statusText: '健康', anomalyCounts: { class1: 0, class2: 0, class3: 0 }, summary: '母线供电稳定，蓄电池满充均衡度 99.2%' },
@@ -445,7 +460,7 @@ export function getSubsystemsForSatellite(satelliteId: string): SubsystemStatus[
     ];
   }
 
-  if (satelliteId === 'zj-tm01') {
+  if (isHighSpectrum) {
     return [
       { key: 'thermal', name: '热控', healthLevel: 'healthy', isNormal: true, statusText: '健康', anomalyCounts: { class1: 0, class2: 0, class3: 0 }, summary: '红外相机深冷温区稳定在 77K' },
       { key: 'energy', name: '能源', healthLevel: 'attention', isNormal: false, statusText: '关注', anomalyCounts: { class1: 1, class2: 0, class3: 0 }, summary: 'B-BUS 备份通道输出电压轻微超标，已切换主路' },
@@ -459,7 +474,7 @@ export function getSubsystemsForSatellite(satelliteId: string): SubsystemStatus[
     ];
   }
 
-  if (satelliteId === 'tx-03') {
+  if (isWeatherSat) {
     return [
       { key: 'thermal', name: '热控', healthLevel: 'healthy', isNormal: true, statusText: '健康', anomalyCounts: { class1: 0, class2: 0, class3: 0 }, summary: '热控回路温差平衡良好' },
       { key: 'energy', name: '能源', healthLevel: 'attention', isNormal: false, statusText: '关注', anomalyCounts: { class1: 1, class2: 0, class3: 0 }, summary: 'B通道5V供电轻度欠压，已恢复' },
@@ -473,7 +488,7 @@ export function getSubsystemsForSatellite(satelliteId: string): SubsystemStatus[
     ];
   }
 
-  // 默认云尖沐曦号（包含 健康、关注、告警 完整三态示范）
+  // 默认云尖沐曦号及各计算星（包含 健康、关注、告警 完整三态示范）
   return [
     { key: 'thermal', name: '热控', healthLevel: 'healthy', isNormal: true, statusText: '健康', anomalyCounts: { class1: 0, class2: 0, class3: 0 }, summary: '回路温控在轨工况良好，流体回路压力正常' },
     { key: 'energy', name: '能源', healthLevel: 'attention', isNormal: false, statusText: '关注', anomalyCounts: { class1: 5, class2: 5, class3: 5 }, summary: 'A通道瞬态欠压自愈完成，当前电源母线稳定' },
@@ -487,33 +502,7 @@ export function getSubsystemsForSatellite(satelliteId: string): SubsystemStatus[
   ];
 }
 
-export const SUBSYSTEMS_DATA: SubsystemStatus[] = getSubsystemsForSatellite('yj-mx01');
-
-export interface AnomalyItem {
-  id: string;
-  classType: 'I' | 'II' | 'III';
-  systemKey: SystemKey;
-  systemName: string;
-  discoveryTime: string;
-  anomalyType: string;
-  telemetryCode: string;
-  detailSummary: string;
-  symptom?: string; // 异常现象描述
-  actionMeasure?: string; // 处置措施
-  reportData?: {
-    reportTitle: string;
-    findings: string[];
-    actionSuggestions: string[];
-  };
-  processStatus: '已处置' | '待复核' | '待处理';
-  actionRecord?: {
-    handledTime: string;
-    actionPlan: string;
-    executionLog: string[];
-    result: string;
-  };
-  telecommandHex?: string;
-}
+export const SUBSYSTEMS_DATA: SubsystemStatus[] = getSubsystemsForSatellite('scs-04-16');
 
 export const ANOMALIES_DATA: AnomalyItem[] = [
   // I类异常
@@ -982,10 +971,14 @@ export const ANOMALIES_DATA: AnomalyItem[] = [
 
 // 根据卫星获取专属异常列表
 export function getAnomaliesForSatellite(satelliteId: string): AnomalyItem[] {
-  if (satelliteId === 'tg-02') {
+  const isHighSpectrum = satelliteId === 'scs-03-14' || satelliteId === 'zj-tm01';
+  const isSarRadar = satelliteId === 'scs-01-06' || satelliteId === 'scs-01-09' || satelliteId === 'tg-02';
+  const isWeatherSat = satelliteId === 'scs-04-15' || satelliteId === 'tx-03';
+
+  if (isSarRadar) {
     return [];
   }
-  if (satelliteId === 'zj-tm01') {
+  if (isHighSpectrum) {
     return [
       {
         id: 'anom-zj-1',
@@ -1022,7 +1015,7 @@ export function getAnomaliesForSatellite(satelliteId: string): AnomalyItem[] {
       }
     ];
   }
-  if (satelliteId === 'tx-03') {
+  if (isWeatherSat) {
     return [
       {
         id: 'anom-tx-1',

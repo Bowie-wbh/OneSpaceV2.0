@@ -46,6 +46,9 @@ export interface Satellite {
   subSatellitePoint?: { region: string; lng: number; lat: number }; // 星下点预测：区域名 + 实时经纬度（6位小数）
   subSatelliteBase?: { lng: number; lat: number }; // 星下点预测基准点，用于推算实时漂移
   subSatelliteTrackSeconds?: number; // 星下点预测已运行时长（秒），驱动经纬度实时变化
+  noradId?: string;
+  line1?: string;
+  line2?: string;
 }
 
 // 阶段步骤 Key

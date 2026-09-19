@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as satellite from 'satellite.js';
 import { ArrowDown, GripVertical, Bot } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -73,18 +74,55 @@ const LINK_COMMAND_WINDOW_SECONDS = 60;
 const LINK_SUCCESS_PROBABILITY = 0.75;
 const START_SUCCESS_PROBABILITY = 0.85;
 
-// 星下点预测实时漂移参数：经度沿地面轨迹匀速漂移，纬度按正弦规律在基准点附近周期性摆动
-const SUB_SATELLITE_LNG_SPEED_PER_SEC = 0.045;
-const SUB_SATELLITE_LAT_AMPLITUDE = 8;
-const SUB_SATELLITE_LAT_PERIOD_SECONDS = 240;
+// 星下点预测经纬度到真实地理区域的智能映射
+const getSubSatelliteRegion = (lng: number, lat: number): string => {
+  if (lat >= 35 && lat <= 45 && lng >= 75 && lng <= 95) return '塔里木盆地 / 西北陆区';
+  if (lat >= 10 && lat <= 25 && lng >= 105 && lng <= 125) return '南海海域 / 中沙群岛';
+  if (lat >= 45 && lat <= 58 && lng >= 95 && lng <= 120) return '贝加尔湖 / 西伯利亚';
+  if (lat >= 45 && lat <= 60 && lng >= 135 && lng <= 160) return '鄂霍次克海 / 远东空域';
+  if (lat >= 25 && lat <= 35 && lng >= 110 && lng <= 125) return '华东长江流域 / 浙皖丘陵';
+  if (lat >= 35 && lat <= 45 && lng >= 110 && lng <= 125) return '华北平原 / 京津冀空域';
+  if (lat >= 20 && lat <= 30 && lng >= 100 && lng <= 110) return '云贵高原 / 西南林区';
+  if (lat >= 45 && lat <= 55 && lng >= 120 && lng <= 135) return '大兴安岭 / 东北林带';
+  if (lng >= 73 && lng <= 135 && lat >= 15 && lat <= 55) return '中国空域及临近陆海';
+  if (lng >= 120 && lng <= 180 && lat >= -20 && lat <= 40) return '西太平洋深远海域';
+  if (lng >= 60 && lng <= 100 && lat >= -30 && lat <= 20) return '印度洋深水航道';
+  if (lng < -30 && lng > -100 && lat > 0) return '北美洲及西大西洋';
+  if (lng >= -30 && lng <= 60 && lat > 35) return '欧亚大陆腹地';
+  if (lat < -40) return '南半球高纬度极地洋区';
+  return '全球在轨巡航测控区';
+};
 
-// 每秒推进星下点预测经纬度（相对基准点漂移，保持 6 位小数精度实时变化）
+// 每秒推进星下点预测经纬度（基于卫星真实 TLE 根数 SGP4 实时解算，与 3D 地球完全一致）
 const advanceSubSatellitePoint = (sat: Satellite): Satellite => {
+  if (sat.line1 && sat.line2) {
+    try {
+      const satrec = satellite.twoline2satrec(sat.line1, sat.line2);
+      const now = new Date();
+      const pv = satellite.propagate(satrec, now);
+      if (pv.position && typeof pv.position !== 'boolean') {
+        const gmst = satellite.gstime(now);
+        const geodetic = satellite.eciToGeodetic(pv.position, gmst);
+        const lng = Number(satellite.degreesLong(geodetic.longitude).toFixed(6));
+        const lat = Number(satellite.degreesLat(geodetic.latitude).toFixed(6));
+        const altitude = Number(geodetic.height.toFixed(3));
+        const region = getSubSatelliteRegion(lng, lat);
+        return {
+          ...sat,
+          altitude,
+          subSatellitePoint: { region, lng, lat },
+        };
+      }
+    } catch {
+      // fallback
+    }
+  }
+
   if (!sat.subSatelliteBase) return sat;
   const trackSeconds = (sat.subSatelliteTrackSeconds ?? 0) + 1;
-  let nextLng = sat.subSatelliteBase.lng + SUB_SATELLITE_LNG_SPEED_PER_SEC * trackSeconds;
+  let nextLng = sat.subSatelliteBase.lng + 0.045 * trackSeconds;
   nextLng = ((nextLng + 180) % 360 + 360) % 360 - 180;
-  const nextLat = sat.subSatelliteBase.lat + Math.sin(trackSeconds / SUB_SATELLITE_LAT_PERIOD_SECONDS) * SUB_SATELLITE_LAT_AMPLITUDE;
+  const nextLat = sat.subSatelliteBase.lat + Math.sin(trackSeconds / 240) * 8;
   return {
     ...sat,
     subSatelliteTrackSeconds: trackSeconds,

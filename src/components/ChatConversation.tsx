@@ -751,14 +751,14 @@ export const ChatConversation: React.FC<ChatConversationProps> = ({
               <div className="w-full flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => onConfirmRequirementsReady('cancel-innovative-start')}
+                  onClick={() => onConfirmRequirementsReady?.('cancel-innovative-start')}
                   className="px-3.5 py-1.5 rounded-full text-xs font-semibold border cursor-pointer bg-white dark:bg-[#111728] border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-white/[0.2] hover:bg-slate-50 dark:hover:bg-white/[0.06] active:scale-95 transition-all"
                 >
                   取消
                 </button>
                 <button
                   type="button"
-                  onClick={() => onConfirmRequirementsReady('confirm-innovative-start')}
+                  onClick={() => onConfirmRequirementsReady?.('confirm-innovative-start')}
                   className="px-3.5 py-1.5 rounded-full text-xs font-semibold border cursor-pointer bg-white dark:bg-[#111728] border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-emerald-400 dark:hover:border-emerald-400/60 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 active:scale-95 transition-all"
                 >
                   确认

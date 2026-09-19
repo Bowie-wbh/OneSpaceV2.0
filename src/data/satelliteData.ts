@@ -1,88 +1,77 @@
 import { Satellite, FlowStepItem, HistorySession } from '../types';
+import { SATELLITE_CONSTELLATION_ITEMS } from './mockRemoteSensingData';
 
-// 初始卫星列表（已入境与待入境卫星星座编队）
-export const INITIAL_SATELLITES: Satellite[] = [
-  {
-    id: 'yj-mx01',
-    name: '云尖沐曦号',
-    code: 'YJ-MX-01',
-    orbitType: '太阳同步晨昏轨道 (SSO)',
-    status: 'upcoming', // 待入境，默认从状态1（入境倒计时）开始
-    countdownSeconds: 30,
-    inboundElapsedSeconds: 0,
-    groundStation: '喀什 1002-X/S',
-    maxElevation: 78.5,
-    imagingWindow: '14:25:30 - 14:32:15',
-    resolution: '0.5m 全色 / 2.0m 多光谱',
-    sensorPayload: '智能宽幅多光谱相机 + 边缘AI加速模组',
-    altitude: 502.418,
-    batteryLevel: 96,
-    tempCore: 18.2,
-    downlinkSpeed: '1.5 Gbps',
-    subSatellitePoint: { region: '塔里木盆地', lng: 82.3, lat: 40.1 },
-    subSatelliteBase: { lng: 82.3, lat: 40.1 },
-  },
-  {
-    id: 'zj-tm01',
-    name: '之江天目01号',
-    code: 'ZJ-TM-01',
-    orbitType: '极地太阳同步轨道 (SSO)',
-    status: 'upcoming', // 待入境
-    countdownSeconds: 520,
-    inboundElapsedSeconds: 0,
-    groundStation: '密云 1308-X/Ka',
-    maxElevation: 64.2,
-    imagingWindow: '14:28:10 - 14:35:40',
-    resolution: '0.75m 高分光学',
-    sensorPayload: '高分辨率红外热成像仪',
-    altitude: 518.326,
-    batteryLevel: 91,
-    tempCore: 19.5,
-    downlinkSpeed: '1.2 Gbps',
-    subSatellitePoint: { region: '鄂霍次克海', lng: 148.6, lat: 55.4 },
-    subSatelliteBase: { lng: 148.6, lat: 55.4 },
-  },
-  {
-    id: 'tg-02',
-    name: '天工探索二号',
-    code: 'TG-02',
-    orbitType: '倾斜低地球轨道 (LEO)',
-    status: 'upcoming', // 待入境
-    countdownSeconds: 1680,
-    inboundElapsedSeconds: 0,
-    groundStation: '三亚 1105-Ka',
-    maxElevation: 71.0,
-    imagingWindow: '15:10:00 - 15:17:30',
-    resolution: '1.0m C波段雷达',
-    sensorPayload: '合成孔径雷达 (SAR) 载荷',
-    altitude: 540.215,
-    batteryLevel: 88,
-    tempCore: 17.8,
-    downlinkSpeed: '2.0 Gbps',
-    subSatellitePoint: { region: '南海中沙群岛', lng: 114.2, lat: 15.8 },
-    subSatelliteBase: { lng: 114.2, lat: 15.8 },
-  },
-  {
-    id: 'tx-03',
-    name: '天巡者03号',
-    code: 'TX-03',
-    orbitType: '太阳同步晨昏轨道 (SSO)',
-    status: 'upcoming', // 待入境
-    countdownSeconds: 3240,
-    inboundElapsedSeconds: 0,
-    groundStation: '佳木斯 1402-X/Ka',
-    maxElevation: 58.6,
-    imagingWindow: '15:45:15 - 15:52:00',
-    resolution: '0.5m 超高分相机',
-    sensorPayload: '高光谱成像仪 + 大容量固存',
-    altitude: 541.878,
-    batteryLevel: 94,
-    tempCore: 16.9,
-    downlinkSpeed: '1.8 Gbps',
-    subSatellitePoint: { region: '贝加尔湖', lng: 104.9, lat: 53.5 },
-    subSatelliteBase: { lng: 104.9, lat: 53.5 },
+// 初始卫星列表（与 3D 地球空间星座 SATELLITE_CONSTELLATION_ITEMS 完全一致的数据集）
+export const INITIAL_SATELLITES: Satellite[] = SATELLITE_CONSTELLATION_ITEMS.map((item, idx) => {
+  // 默认 SCS-04-16 云尖沐曦号为已入境首选星，其余按不同倒计时排队待入境
+  const isInbound = item.id === 'scs-04-16' || item.code === 'SCS-04-16';
+  
+  const groundStations = [
+    '喀什 1002-X/S',
+    '密云 1308-X/Ka',
+    '三亚 1105-Ka',
+    '佳木斯 1402-X/Ka',
+    '七台河 1201-X/Ka',
+    '酒泉 1001-X/Ka',
+    '西安 1503-X/S',
+  ];
+  const station = groundStations[idx % groundStations.length];
+
+  // 预设计算窗口与倒计时
+  const countdowns = [
+    320, 680, 1140, 1560, 1980, 2400, 2820, 3240, 3660, 4080, 4500, 4920, 5340, 402
+  ];
+  const countdown = isInbound ? 402 : (countdowns[idx] || (idx + 1) * 450);
+
+  // 估算轨道高度 (约 500 ~ 545 km)
+  const altitudes = [
+    512.42, 514.18, 513.65, 518.32, 520.45, 517.88, 
+    522.15, 519.34, 524.60, 521.82, 526.40, 523.15, 
+    535.80, 538.20, 502.418
+  ];
+  const altitude = altitudes[idx] || 515.0;
+
+  // 对应载荷描述
+  let payloadDesc = item.payload.aiCompute + ' 边缘AI算力 + 激光通信';
+  if (item.id === 'scs-04-16') {
+    payloadDesc = '智能宽幅多光谱相机 + 边缘AI加速模组 (248 TOPS)';
+  } else if (item.id === 'scs-03-14') {
+    payloadDesc = '高光谱成像仪 (30m) + 大容量固存';
+  } else if (item.id === 'scs-04-15') {
+    payloadDesc = '星载气象辐射计 (50m) + 强对流预警模型';
   }
-];
+
+  // 对应地面分辨率
+  let resolutionDesc = '0.5m 全色 / 2.0m 多光谱';
+  if (item.id === 'scs-03-14') resolutionDesc = '30m 高光谱通道';
+  else if (item.id === 'scs-04-15') resolutionDesc = '50m 气象多通道';
+  else if (item.id === 'scs-01-06' || item.id === 'scs-01-09') resolutionDesc = '1.0m C波段 SAR 雷达';
+
+  return {
+    id: item.id,
+    name: item.name,
+    code: item.code,
+    orbitType: '极地太阳同步轨道 (SSO)',
+    status: isInbound ? 'in-bound' : 'upcoming',
+    countdownSeconds: countdown,
+    inboundElapsedSeconds: isInbound ? 35 : 0,
+    groundStation: station,
+    maxElevation: Number((58 + (idx * 3.7) % 32).toFixed(1)),
+    imagingWindow: isInbound ? '14:25:30 - 14:32:15' : `14:${String((30 + idx * 4) % 60).padStart(2, '0')}:00 - 14:${String((37 + idx * 4) % 60).padStart(2, '0')}:30`,
+    resolution: resolutionDesc,
+    sensorPayload: payloadDesc,
+    altitude,
+    batteryLevel: 90 + (idx % 8),
+    tempCore: Number((16.5 + (idx * 0.7) % 5).toFixed(1)),
+    downlinkSpeed: item.payload.laserSpeed || '10 Gbps',
+    subSatellitePoint: { region: '中国及邻近海域', lng: 110.25, lat: 28.5 },
+    subSatelliteBase: { lng: 110.25, lat: 28.5 },
+    noradId: item.noradId,
+    line1: item.line1,
+    line2: item.line2,
+  };
+});
+
 
 // 1. 常规模式 - 地面模型处理流程阶段步骤（第 5 步）
 export const REGULAR_GROUND_FLOW_STEPS: FlowStepItem[] = [
