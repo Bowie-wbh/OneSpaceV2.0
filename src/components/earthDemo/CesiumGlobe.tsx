@@ -425,7 +425,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
         const globe = scene.globe;
 
         globe.enableLighting = true;
-        scene.globe.depthTestAgainstTerrain = true;
+        scene.globe.depthTestAgainstTerrain = false;
         scene.highDynamicRange = true;
 
         scene.screenSpaceCameraController.minimumZoomDistance = 80;

@@ -1624,9 +1624,9 @@ function SatelliteDashboardCard({
 
   const activeSatellite = SATELLITE_DASHBOARD_LIST.find((s) => s.id === selectedId) ?? SATELLITE_DASHBOARD_LIST[0];
 
-  // 卫星轨道经纬度与高度：基于真实 TLE 实时解算大地坐标系参数（经度、纬度、高度）
-  const [orbitPos, setOrbitPos] = useState<{ lng: number; lat: number; height: number }>({
-    lng: 0, lat: 0, height: 0,
+  // 卫星轨道经纬度、高度与速度：基于真实 TLE 实时解算大地坐标系参数（经度、纬度、高度、速度）
+  const [orbitPos, setOrbitPos] = useState<{ lng: number; lat: number; height: number; velocity: number }>({
+    lng: 0, lat: 0, height: 0, velocity: 7.6,
   });
 
   useEffect(() => {
@@ -1638,10 +1638,19 @@ function SatelliteDashboardCard({
       if (pv.position && typeof pv.position !== 'boolean') {
         const gmst = satellite.gstime(now);
         const geodetic = satellite.eciToGeodetic(pv.position, gmst);
+        let speed = 7.6;
+        if (pv.velocity && typeof pv.velocity !== 'boolean') {
+          speed = Math.sqrt(
+            pv.velocity.x * pv.velocity.x +
+            pv.velocity.y * pv.velocity.y +
+            pv.velocity.z * pv.velocity.z
+          );
+        }
         setOrbitPos({
           lng: satellite.degreesLong(geodetic.longitude),
           lat: satellite.degreesLat(geodetic.latitude),
           height: geodetic.height, // 单位 km
+          velocity: speed, // 单位 km/s
         });
       }
     };
@@ -1723,7 +1732,7 @@ function SatelliteDashboardCard({
           </div>
         </div>
 
-        {/* 轨道信息 (经度、纬度、高度) */}
+        {/* 轨道信息 (经度、纬度、高度、速度) */}
         <MonitorSection
           label="轨道信息"
           open={coordOpen}
@@ -1742,14 +1751,13 @@ function SatelliteDashboardCard({
                 {Math.abs(orbitPos.lat).toFixed(2)}° {orbitPos.lat >= 0 ? 'N' : 'S'}
               </div>
             </div>
-            <div className="col-span-2 px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
-              <div>
-                <div className="text-[9px] 2xl:text-[10px] text-slate-400">高度</div>
-                <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{orbitPos.height.toFixed(1)} km</div>
-              </div>
-              <span className="text-[9px] 2xl:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30">
-                实时轨道
-              </span>
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">高度</div>
+              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{orbitPos.height.toFixed(1)} km</div>
+            </div>
+            <div className="px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-[9px] 2xl:text-[10px] text-slate-400">速度</div>
+              <div className="text-[11px] 2xl:text-xs font-bold text-slate-100 font-mono">{orbitPos.velocity.toFixed(2)} km/s</div>
             </div>
           </div>
         </MonitorSection>
