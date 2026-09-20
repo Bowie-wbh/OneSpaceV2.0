@@ -53,6 +53,11 @@ export const ToolCards: React.FC<ToolCardsProps> = ({
     activeSat = windowClosedSat;
   }
 
+  // 指令发送窗口已结束状态下不显示卡片
+  if (cardState === 'window-closed') {
+    return null;
+  }
+
   const isClickable = cardState === 'sendable';
   const remainingCommandSeconds = activeSat?.linkStateSeconds ?? 0;
 
@@ -74,8 +79,6 @@ export const ToolCards: React.FC<ToolCardsProps> = ({
         return { prefix: `${activeSat?.name}星上模型启动失败` };
       case 'sendable':
         return { prefix: `可以给${activeSat?.name}发送指令，还剩`, highlight: `${remainingCommandSeconds}s`, suffix: undefined };
-      case 'window-closed':
-        return { prefix: `${activeSat?.name}指令发送窗口已结束` };
       default:
         return { prefix: '待入境不可用' };
     }
@@ -97,8 +100,6 @@ export const ToolCards: React.FC<ToolCardsProps> = ({
         return `${activeSat?.name} 星上模型启动失败`;
       case 'sendable':
         return `开启${activeSat?.name}发送指令窗口，剩余 ${remainingCommandSeconds}s结束`;
-      case 'window-closed':
-        return `${activeSat?.name} 指令发送窗口已结束`;
       default:
         return '待入境不可用';
     }

@@ -425,7 +425,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
         const globe = scene.globe;
 
         globe.enableLighting = true;
-        scene.globe.depthTestAgainstTerrain = false;
+        scene.globe.depthTestAgainstTerrain = true;
         scene.highDynamicRange = true;
 
         scene.screenSpaceCameraController.minimumZoomDistance = 80;
@@ -598,7 +598,20 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
             if (canvasPos && viewer.scene?.canvas) {
               const toPoint = Cesium.Cartesian3.subtract(cartesian, viewer.camera.position, new Cesium.Cartesian3());
               const dot = Cesium.Cartesian3.dot(toPoint, viewer.camera.direction);
-              if (dot > 0) {
+              
+              // 检查点位是否被地球遮挡（处于地球背面）
+              let isOccluded = false;
+              try {
+                const occluder = new Cesium.EllipsoidalOccluder(
+                  viewer.scene.globe.ellipsoid,
+                  viewer.camera.position
+                );
+                isOccluded = !occluder.isPointVisible(cartesian);
+              } catch (occlErr) {
+                // 如果遮挡器计算失败，回退到 dot 判断
+              }
+
+              if (dot > 0 && !isOccluded) {
                 // PointMindMapOverlay 与 Cesium 画布容器共享同一父级坐标系，直接使用画布内坐标即可对齐
                 onPointScreenPositionChangeRef.current?.({
                   x: canvasPos.x,
@@ -662,7 +675,6 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
           scaleByDistance: new Cesium.NearFarScalar(1.5e3, 1.6, 2.0e7, 0.75),
           verticalOrigin: Cesium.VerticalOrigin.CENTER,
           horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
       });
     });

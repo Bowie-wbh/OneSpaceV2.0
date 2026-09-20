@@ -824,6 +824,10 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
 
     setDownloadSuccess(true);
     setTimeout(() => {
+      setDownloadSuccess(false);
+    }, 2500);
+  };
+
   const handleDownloadSingleModalImage = (img: ResultImageItem, tabLabel: string) => {
     const element = document.createElement('a');
     element.setAttribute('href', img.url);
@@ -835,10 +839,6 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     setModalDownloadSuccess(true);
     setTimeout(() => {
       setModalDownloadSuccess(false);
-    }, 2500);
-  };
-
-      setDownloadSuccess(false);
     }, 2500);
   };
   const renderResultImageCards = (activeImg: ResultImageItem, currentTab: ResultTabConfig, images: ResultImageItem[], safeIdx: number) => {

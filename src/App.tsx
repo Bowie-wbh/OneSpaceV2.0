@@ -2944,7 +2944,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         {/* 顶部标题栏与统一对话页展示模式切换/看板筛选导航 */}
         <div className="relative z-10 px-3 pt-2">
           <Header
-            activeSatelliteCount={satellites.length}
+            activeSatelliteCount={satellites.filter((s) => s.status === 'in-bound').length}
             isOrbitForecastOpen={isOrbitForecastOpen}
             onToggleOrbitForecast={() => setIsOrbitForecastOpen(!isOrbitForecastOpen)}
             activeTab={activeTab}
