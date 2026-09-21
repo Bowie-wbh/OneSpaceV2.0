@@ -492,6 +492,94 @@ export const MarkdownMessageContent: React.FC<{ content: string }> = ({ content 
   return <div className="space-y-1 font-sans text-left">{elements}</div>;
 };
 
+// 生成路由系统评估报告 Markdown 内容
+const getRouterReportContent = (satTag: string) => `为您生成“${satTag}”的路由系统评估报告：
+
+**评估周期**：2026-07-22 ～ 2026-07-31
+
+**实际数据覆盖**：2026-07-22 02:21:25 ～ 2026-07-27 02:26:58
+
+| 健康评分 | 健康状态 | 风险等级 | 数据覆盖率 | 评分置信度 |
+| :---: | :---: | :---: | :---: | :---: |
+| **65.5 / 100** | **需关注** | **中** | **13.6%** | **低** |
+
+ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始返回 22/22 项；可判读 3/22 项；满足评分门槛 3/22 项；风险等级 **中**。
+
+### 二、关键遥测项总结
+
+| 参数名称 | 遥测代号 | 遥测定义 | 取值分布 | 正常比例 |
+| :--- | :--- | :--- | :--- | :--- |
+| CPU占用率 | TML006 | CPU 占用率（%） | 4.0 ～ 87.0 | 96.6%（485/502） |
+| 内存占用率 | TML007 | 内存占用率（%） | 26.0 ～ 27.0 | 100.0%（502/502） |
+| 磁盘占用率 | TML008 | 磁盘占用率（%） | 52.0 | 0.0%（0/502） |
+| 自检状态 | TML013 | 0=正常,1~4=Docker异常,5=容器个数异常,6=启动时间异常 | — | — |
+| 最后一次上注文件状态 | TML017 | 0=正常执行 | 0.0（502） | — |
+| 管理口状态 | TML021 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet1状态 | TML022 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet2状态 | TML029 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet4状态 | TML036 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet5状态 | TML043 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet6状态 | TML050 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet7状态 | TML057 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet8状态 | TML064 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet9状态 | TML071 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet10状态 | TML078 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet12状态 | TML085 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet13状态 | TML092 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet14状态 | TML099 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet15状态 | TML106 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet16状态 | TML113 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet17状态 | TML120 | 0=开启,1=关闭,2=未知 | — | — |
+| 接口Ethernet18状态 | TML127 | 0=开启,1=关闭,2=未知 | — | — |
+
+### 三、状态变化趋势
+
+#### 3.1 系统资源趋势
+三张折线趋势图
+
+#### 3.2 路由运行与端口状态矩阵
+路由运行与端口状态矩阵
+
+### 四、异常提醒与分析
+
+| 参数名称 | 遥测代号 | 异常类型 | 发生次数 | 原始时间 |
+| :--- | :--- | :--- | :--- | :--- |
+| CPU占用率 | TML006 | Q01｜严重 | 1 | 2026-07-23 14:08:19.189000 |
+| CPU占用率 | TML006 | ClickHouse｜同窗时序异常 | 17 | — |
+| 磁盘占用率 | TML008 | ClickHouse｜同窗时序异常 | 502 | — |
+
+> 异常证据来源说明：\`Q01\` 提供原始异常事件，\`ClickHouse\` 提供健康结论和同窗异常证据；两类证据分列展示，Q01 不参与健康评分计算。
+
+### 五、风险评估
+
+| 风险维度 | 评估结果 |
+| :--- | :--- |
+| 异常严重度 | 高 |
+| 健康评分口径 | ClickHouse 同窗核心遥测 |
+| ClickHouse 时序完整性 | 原始返回 22/22 项；可判读 3/22 项；满足评分门槛 3/22 项；缺失/不可读：TML013、TML021、TML022、TML029、TML036、TML043、TML050、TML057、TML064、TML071、TML078、TML085、TML092、TML099、TML106、TML113、TML120、TML127、TML017 |
+| 数据完整性 | ClickHouse 原始返回：22/22 项；可判读：3/22 项；满足评分门槛：3/22 项。 |
+| 综合风险 | 中 |
+
+### 六、建议与结论
+
+**建议**
+- 建议按既定周期持续观测星载路由关键遥测变化。
+- 建议复核本周期评分、异常事件来源及可用遥测记录。
+- 建议在后续同一评估时间窗持续观测星载路由遥测状态。
+
+**结论**
+- 综合风险 中；健康结论基于 ClickHouse 同窗核心遥测；原始返回 22/22 项；可判读 3/22 项；满足评分门槛 3/22 项。
+
+**评分置信度说明**
+本报告覆盖率口径：已按权威规则评价指标占比：已按权威规则完成评价的指标，占全部纳入评估指标的比例。
+
+| 条件 | 评分置信度 |
+| :--- | :--- |
+| 无可评分证据或评分未生成 | 未评价 |
+| 覆盖率小于 50% | 低 |
+| 覆盖率 50%（含）至 80%（不含） | 中 |
+| 覆盖率 80%（含）及以上 | 高 |`;
+
 interface HealthCheckViewProps {
   satellites?: Satellite[];
   selectedSatellite: Satellite;
@@ -538,6 +626,10 @@ export const HealthCheckView: React.FC<HealthCheckViewProps> = ({
       onSelectSatellite(satId);
     }
   };
+
+  // 路由评估状态机（支持在“健康诊断”单独视图模式下的交互）
+  const [routerFlowState, setRouterFlowState] = useState<{ type: 'idle' } | { type: 'awaiting_satellite' }>({ type: 'idle' });
+
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -691,95 +783,31 @@ export const HealthCheckView: React.FC<HealthCheckViewProps> = ({
     timeoutTimerRef.current = setTimeout(() => {
       let thinking = "正在调用星载遥测数据库，对指定分系统及时间序列进行深度特征提取与健康状态评估...";
       let reply = "";
-      if (text.includes('蓄电池') || text.includes('平衡')) {
+      let quickReplyOptions: string[] | undefined = undefined;
+
+      if (routerFlowState.type === 'awaiting_satellite') {
+        const trimmed = text.trim();
+        const found = satellites.find(s => 
+          trimmed.includes(s.name) || 
+          trimmed.includes(s.code) || 
+          s.name.includes(trimmed) || 
+          (s.code && s.code.toLowerCase() === trimmed.toLowerCase())
+        );
+        const satTag = found ? `${found.name} (${found.code})` : trimmed;
+        if (found) {
+          handleSatelliteChange(found.id);
+        }
+        setRouterFlowState({ type: 'idle' });
+        thinking = `正在调用 ${satTag} 星载时序遥测数据库 (ClickHouse)...\n- 加载评估周期：2026-07-22 ～ 2026-07-31\n- 提取 ${satTag} 星载路由系统 22 项核心指标时序数据\n- 评估 CPU/内存/磁盘占用率分布及异常事件\n- 关联 Q01 原始告警与同窗时序异常比对\n- 计算健康度评分 (65.5/100) 及评分置信度...`;
+        reply = getRouterReportContent(satTag);
+      } else if (text.includes('蓄电池') || text.includes('平衡')) {
         thinking = "已提取最近10天能源分系统蓄电池单体电压、充放电电流及温度遥测序列。\n- 单体电压极差统计分析...\n- 荷电状态(SOC)均衡度评估...";
         reply = `【蓄电池平衡分析报告（最近10天）】\n\n1. **总体评估**：蓄电池组整体健康度良好（SOH = 97.5%），无单体严重衰减现象。\n2. **电压极差**：最大单体电压差值维持在 \`14.2 mV\` 以内（阈值 < 25mV），处于安全合规区间。\n3. **平衡状态**：第7天至第9天光照阴影交替期间，串联单体3#出现微弱压差偏移（约 8.5mV），BMS已自动触发主动均衡充电。\n4. **建议**：建议在下次轨道过境时进行一次例行脉冲校准，无需人工干预。`;
       } else if (text.includes('路由') || text.includes('状态')) {
-        thinking = "正在调用星载时序遥测数据库 (ClickHouse)...\n- 加载评估周期：2026-07-22 ～ 2026-07-31\n- 提取星载路由系统 22 项核心指标时序数据\n- 评估 CPU/内存/磁盘占用率分布及异常事件\n- 关联 Q01 原始告警与同窗时序异常比对\n- 计算健康度评分 (65.5/100) 及评分置信度...";
-        reply = `**评估周期**：2026-07-22 ～ 2026-07-31
-
-**实际数据覆盖**：2026-07-22 02:21:25 ～ 2026-07-27 02:26:58
-
-| 健康评分 | 健康状态 | 风险等级 | 数据覆盖率 | 评分置信度 |
-| :---: | :---: | :---: | :---: | :---: |
-| **65.5 / 100** | **需关注** | **中** | **13.6%** | **低** |
-
-ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始返回 22/22 项；可判读 3/22 项；满足评分门槛 3/22 项；风险等级 **中**。
-
-### 二、关键遥测项总结
-
-| 参数名称 | 遥测代号 | 遥测定义 | 取值分布 | 正常比例 |
-| :--- | :--- | :--- | :--- | :--- |
-| CPU占用率 | TML006 | CPU 占用率（%） | 4.0 ～ 87.0 | 96.6%（485/502） |
-| 内存占用率 | TML007 | 内存占用率（%） | 26.0 ～ 27.0 | 100.0%（502/502） |
-| 磁盘占用率 | TML008 | 磁盘占用率（%） | 52.0 | 0.0%（0/502） |
-| 自检状态 | TML013 | 0=正常,1~4=Docker异常,5=容器个数异常,6=启动时间异常 | — | — |
-| 最后一次上注文件状态 | TML017 | 0=正常执行 | 0.0（502） | — |
-| 管理口状态 | TML021 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet1状态 | TML022 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet2状态 | TML029 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet4状态 | TML036 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet5状态 | TML043 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet6状态 | TML050 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet7状态 | TML057 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet8状态 | TML064 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet9状态 | TML071 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet10状态 | TML078 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet12状态 | TML085 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet13状态 | TML092 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet14状态 | TML099 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet15状态 | TML106 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet16状态 | TML113 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet17状态 | TML120 | 0=开启,1=关闭,2=未知 | — | — |
-| 接口Ethernet18状态 | TML127 | 0=开启,1=关闭,2=未知 | — | — |
-
-### 三、状态变化趋势
-
-#### 3.1 系统资源趋势
-三张折线趋势图
-
-#### 3.2 路由运行与端口状态矩阵
-路由运行与端口状态矩阵
-
-### 四、异常提醒与分析
-
-| 参数名称 | 遥测代号 | 异常类型 | 发生次数 | 原始时间 |
-| :--- | :--- | :--- | :--- | :--- |
-| CPU占用率 | TML006 | Q01｜严重 | 1 | 2026-07-23 14:08:19.189000 |
-| CPU占用率 | TML006 | ClickHouse｜同窗时序异常 | 17 | — |
-| 磁盘占用率 | TML008 | ClickHouse｜同窗时序异常 | 502 | — |
-
-> 异常证据来源说明：\`Q01\` 提供原始异常事件，\`ClickHouse\` 提供健康结论和同窗异常证据；两类证据分列展示，Q01 不参与健康评分计算。
-
-### 五、风险评估
-
-| 风险维度 | 评估结果 |
-| :--- | :--- |
-| 异常严重度 | 高 |
-| 健康评分口径 | ClickHouse 同窗核心遥测 |
-| ClickHouse 时序完整性 | 原始返回 22/22 项；可判读 3/22 项；满足评分门槛 3/22 项；缺失/不可读：TML013、TML021、TML022、TML029、TML036、TML043、TML050、TML057、TML064、TML071、TML078、TML085、TML092、TML099、TML106、TML113、TML120、TML127、TML017 |
-| 数据完整性 | ClickHouse 原始返回：22/22 项；可判读：3/22 项；满足评分门槛：3/22 项。 |
-| 综合风险 | 中 |
-
-### 六、建议与结论
-
-**建议**
-- 建议按既定周期持续观测星载路由关键遥测变化。
-- 建议复核本周期评分、异常事件来源及可用遥测记录。
-- 建议在后续同一评估时间窗持续观测星载路由遥测状态。
-
-**结论**
-- 综合风险 中；健康结论基于 ClickHouse 同窗核心遥测；原始返回 22/22 项；可判读 3/22 项；满足评分门槛 3/22 项。
-
-**评分置信度说明**
-本报告覆盖率口径：已按权威规则评价指标占比：已按权威规则完成评价的指标，占全部纳入评估指标的比例。
-
-| 条件 | 评分置信度 |
-| :--- | :--- |
-| 无可评分证据或评分未生成 | 未评价 |
-| 覆盖率小于 50% | 低 |
-| 覆盖率 50%（含）至 80%（不含） | 中 |
-| 覆盖率 80%（含）及以上 | 高 |`;
+        setRouterFlowState({ type: 'awaiting_satellite' });
+        thinking = `1. 识别星载路由系统评估意图。\n2. 校验在轨星座分系统遥测数据可得性。\n3. 提示用户选择或输入需要评估的卫星名称与编号。`;
+        reply = "请问您想评估的是哪颗卫星？";
+        quickReplyOptions = satellites.map(s => s.code ? `${s.name} (${s.code})` : s.name);
       } else {
         thinking = `正在对 ${activeSatellite.name} 进行全系统遥测综合健康体检...\n- 载荷分系统、姿轨控分系统、能源分系统横向对比...`;
         reply = `【卫星综合健康诊断报告】\n\n- **目标卫星**：${activeSatellite.name} (${activeSatellite.code})\n- **在轨天数**：168 天\n- **当前诊断结果**：卫星各分系统运行参数均在设计nominal范围内。\n- **自检结论**：系统整体健康度 **优 (Normal)**，未发现Ⅱ级及以上在轨异常。`;
@@ -790,6 +818,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         role: 'assistant',
         content: '',
         thinkingProcess: '',
+        quickReplyOptions,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages(prev => [...prev, asstMsg]);
@@ -871,7 +900,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         ) : (
           <div className="max-w-3xl mx-auto w-full space-y-6 pb-6">
             {messages.map(msg => (
-              <div key={msg.id} className={`flex items-start w-full ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+              <div key={msg.id} className={`flex flex-col w-full ${msg.role === 'assistant' ? 'items-start' : 'items-end'}`}>
                 <div className={`rounded-2xl p-3.5 sm:p-4 transition-all text-left ${msg.role === 'assistant' ? 'w-full bg-white/90 dark:bg-[#121829]/90 border border-slate-200/90 dark:border-white/[0.08] text-slate-800 dark:text-slate-200 shadow-sm' : 'max-w-[85%] bg-blue-600 text-white shadow-md shadow-blue-900/20'}`}>
                   {msg.role === 'assistant' && msg.thinkingProcess && (
                     <HealthThinkingBlock 
@@ -885,6 +914,25 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
                     <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</div>
                   )}
                 </div>
+
+                {/* 快捷选星/回复胶囊 */}
+                {msg.role === 'assistant' && msg.quickReplyOptions && msg.quickReplyOptions.length > 0 && !msg.isActionConfirmed && (
+                  <div className="w-full flex flex-wrap gap-2 pt-2.5 px-1">
+                    {msg.quickReplyOptions.map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => {
+                          setMessages(prev => prev.map(m => (m.id === msg.id ? { ...m, isActionConfirmed: true } : m)));
+                          handleSendMessage(opt);
+                        }}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-semibold border cursor-pointer bg-white dark:bg-[#111728] border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 active:scale-95 transition-all shadow-2xs"
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -961,30 +961,28 @@ export function App() {
   // =========================================================================
   // 核心业务流程：健康管理模式（星载分系统健康诊断与遥测评估，整合自原“健康管理”对话）
   // =========================================================================
-  const handleHealthCheckFlow = (userText: string) => {
-    handleCreateHistorySession(userText, 'health-check');
-    setWorkspaceKanbanFilter('health');
+  // 路由评估交互状态机：等待用户指定卫星名称或编号
+  const [routerFlowState, setRouterFlowState] = useState<{ type: 'idle' } | { type: 'awaiting_satellite' }>({ type: 'idle' });
 
-    const userMsgId = 'msg-' + Date.now();
-    const asstMsgId = 'msg-' + (Date.now() + 1);
+  // 辅助函数：根据用户输入的文本匹配卫星名称/编号
+  const matchSatelliteTag = (text: string): { satTag: string; matchedSatId?: string } => {
+    const trimmed = text.trim();
+    const found = satellites.find(s => 
+      trimmed.includes(s.name) || 
+      trimmed.includes(s.code) || 
+      s.name.includes(trimmed) || 
+      (s.code && s.code.toLowerCase() === trimmed.toLowerCase())
+    );
+    if (found) {
+      return { satTag: `${found.name} (${found.code})`, matchedSatId: found.id };
+    }
+    return { satTag: trimmed };
+  };
 
-    const newUserMsg: ChatMessage = {
-      id: userMsgId,
-      role: 'user',
-      content: userText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages(prev => [...prev, newUserMsg]);
+  // 生成路由系统评估报告 Markdown 内容
+  const getRouterReportContent = (satTag: string) => `为您生成“${satTag}”的路由系统评估报告：
 
-    let thinking = `正在调用星载遥测数据库，对指定分系统及时间序列进行深度特征提取与健康状态评估...`;
-    let content = '';
-
-    if (userText.includes('蓄电池') || userText.includes('平衡')) {
-      thinking = `已提取最近10天能源分系统蓄电池单体电压、充放电电流及温度遥测序列。\n- 单体电压极差统计分析...\n- 荷电状态(SOC)均衡度评估...`;
-      content = `【蓄电池平衡分析报告（最近10天）】\n\n1. **总体评估**：蓄电池组整体健康度良好（SOH = 97.5%），无单体严重衰减现象。\n2. **电压极差**：最大单体电压差值维持在 \`14.2 mV\` 以内（阈值 < 25mV），处于安全合规区间。\n3. **平衡状态**：第7天至第9天光照阴影交替期间，串联单体3#出现微弱压差偏移（约 8.5mV），BMS已自动触发主动均衡充电。\n4. **建议**：建议在下次轨道过境时进行一次例行脉冲校准，无需人工干预。`;
-    } else if (userText.includes('路由') || userText.includes('状态')) {
-      thinking = `正在调用星载时序遥测数据库 (ClickHouse)...\n- 加载评估周期：2026-07-22 ～ 2026-07-31\n- 提取星载路由系统 22 项核心指标时序数据\n- 评估 CPU/内存/磁盘占用率分布及异常事件\n- 关联 Q01 原始告警与同窗时序异常比对\n- 计算健康度评分 (65.5/100) 及评分置信度...`;
-      content = `**评估周期**：2026-07-22 ～ 2026-07-31
+**评估周期**：2026-07-22 ～ 2026-07-31
 
 **实际数据覆盖**：2026-07-22 02:21:25 ～ 2026-07-27 02:26:58
 
@@ -1068,6 +1066,46 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
 | 覆盖率小于 50% | 低 |
 | 覆盖率 50%（含）至 80%（不含） | 中 |
 | 覆盖率 80%（含）及以上 | 高 |`;
+
+
+  const handleHealthCheckFlow = (userText: string) => {
+    handleCreateHistorySession(userText, 'health-check');
+    setWorkspaceKanbanFilter('health');
+
+    const userMsgId = 'msg-' + Date.now();
+    const asstMsgId = 'msg-' + (Date.now() + 1);
+
+    const newUserMsg: ChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      content: userText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setMessages(prev => [...prev, newUserMsg]);
+
+    let thinking = `正在调用星载遥测数据库，对指定分系统及时间序列进行深度特征提取与健康状态评估...`;
+    let content = '';
+    let quickReplyOptions: string[] | undefined = undefined;
+
+    // 如果处于等待指定卫星状态，用户本次回复为卫星名称/编号
+    if (routerFlowState.type === 'awaiting_satellite') {
+      const { satTag, matchedSatId } = matchSatelliteTag(userText);
+      if (matchedSatId) {
+        setSelectedSatelliteId(matchedSatId);
+      }
+      setRouterFlowState({ type: 'idle' });
+
+      thinking = `正在调用 ${satTag} 星载时序遥测数据库 (ClickHouse)...\n- 加载评估周期：2026-07-22 ～ 2026-07-31\n- 提取 ${satTag} 星载路由系统 22 项核心指标时序数据\n- 评估 CPU/内存/磁盘占用率分布及异常事件\n- 关联 Q01 原始告警与同窗时序异常比对\n- 计算健康度评分 (65.5/100) 及评分置信度...`;
+      content = getRouterReportContent(satTag);
+    } else if (userText.includes('蓄电池') || userText.includes('平衡')) {
+      thinking = `已提取最近10天能源分系统蓄电池单体电压、充放电电流及温度遥测序列。\n- 单体电压极差统计分析...\n- 荷电状态(SOC)均衡度评估...`;
+      content = `【蓄电池平衡分析报告（最近10天）】\n\n1. **总体评估**：蓄电池组整体健康度良好（SOH = 97.5%），无单体严重衰减现象。\n2. **电压极差**：最大单体电压差值维持在 \`14.2 mV\` 以内（阈值 < 25mV），处于安全合规区间。\n3. **平衡状态**：第7天至第9天光照阴影交替期间，串联单体3#出现微弱压差偏移（约 8.5mV），BMS已自动触发主动均衡充电。\n4. **建议**：建议在下次轨道过境时进行一次例行脉冲校准，无需人工干预。`;
+    } else if (userText.includes('路由') || userText.includes('状态')) {
+      // 路由系统评估入口 Step 1：询问评估哪颗卫星
+      setRouterFlowState({ type: 'awaiting_satellite' });
+      thinking = `1. 识别星载路由系统评估意图。\n2. 校验在轨星座分系统遥测数据可得性。\n3. 提示用户选择或输入需要评估的卫星名称与编号。`;
+      content = `请问您想评估的是哪颗卫星？`;
+      quickReplyOptions = satellites.map(s => s.code ? `${s.name} (${s.code})` : s.name);
     } else {
       const targetSat = selectedSatellite?.name || '云尖沐曦号';
       thinking = `正在对 ${targetSat} 进行全系统遥测综合健康体检...\n- 载荷分系统、姿轨控分系统、能源分系统横向对比...`;
@@ -1079,6 +1117,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         messageId: asstMsgId,
         thinking,
         content,
+        quickReplyOptions,
       });
     }, 200);
   };
@@ -2091,6 +2130,12 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
 
   // 用户在多星选择胶囊中点击某颗卫星后，作为用户消息发送并继续发起任务
   const handleSelectSingleOrbitQuickReply = (messageId: string, satName: string) => {
+    if (routerFlowState.type === 'awaiting_satellite') {
+      setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, isActionConfirmed: true } : m)));
+      handleHealthCheckFlow(satName);
+      return;
+    }
+
     if (satName === '中断任务' || satName === '开启任务') {
       // 林火监测「进度同步」推荐的快捷操作：复用创新应用状态机，走中断/开启对话流
       setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, isActionConfirmed: true } : m)));
@@ -2656,7 +2701,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       return;
     }
 
-    const isHealthIntent = /蓄电池|电池平衡|姿轨控|健康评估|健康诊断|健康度|健康管理|遥测健康|星载路由系统|路由系统.*状态|分系统状态|卫星.*健康/i.test(text);
+    const isHealthIntent = routerFlowState.type === 'awaiting_satellite' || /蓄电池|电池平衡|姿轨控|健康评估|健康诊断|健康度|健康管理|遥测健康|星载路由系统|路由系统|路由.*状态|分系统状态|卫星.*健康/i.test(text);
 
     if (isHealthIntent) {
       handleHealthCheckFlow(text);
