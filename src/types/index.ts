@@ -69,8 +69,9 @@ export interface TimeSlotOption {
   id: string;
   timeRange: string;
   satellite: string;
-  elevation: number;
-  swathWidth: string;
+  payload?: string;
+  elevation?: number;
+  swathWidth?: string;
   cloudProbability: string;
   selected?: boolean;
 }

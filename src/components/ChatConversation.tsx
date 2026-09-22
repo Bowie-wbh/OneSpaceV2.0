@@ -431,10 +431,9 @@ export const ChatConversation: React.FC<ChatConversationProps> = ({
                       <table className="w-full text-xs">
                         <tbody>
                           {[
-                            { label: '时间窗口', value: opt.timeRange },
                             { label: '执行卫星', value: opt.satellite },
-                            { label: '过境仰角', value: `${opt.elevation}°` },
-                            { label: '幅宽', value: opt.swathWidth },
+                            { label: '拍摄时间', value: opt.timeRange },
+                            { label: '有效载荷', value: opt.payload || '智能宽幅多光谱相机' },
                             { label: '预测云量', value: opt.cloudProbability },
                           ].map((f, i) => (
                             <tr key={f.label} className={i !== 0 ? 'border-t border-slate-200/70 dark:border-white/[0.06]' : ''}>

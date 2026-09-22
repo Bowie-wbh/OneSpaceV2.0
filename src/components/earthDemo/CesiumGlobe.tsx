@@ -17,8 +17,6 @@ import {
   Globe, 
   Sun, 
   Moon, 
-  Compass, 
-  Sparkles,
   Flame,
   Building2
 } from 'lucide-react';
@@ -1006,35 +1004,6 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
         </div>
       )}
 
-      {/* 地球底部中间状态标尺 HUD（横向横条展示） */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 sm:gap-5 pointer-events-auto bg-slate-900/85 backdrop-blur-md border border-slate-800/80 rounded-full px-4 py-2 text-xs text-slate-300 shadow-xl whitespace-nowrap max-w-[95vw] overflow-x-auto">
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-400">相机视高:</span>
-          <span className="font-mono text-sky-400 font-medium">{cameraAltitude}</span>
-        </div>
-        <span className="w-px h-3 bg-slate-700/80" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-400">标定中心坐标:</span>
-          <span className="font-mono text-emerald-400">
-            {currentEarthObject.lng.toFixed(4)}°E, {currentEarthObject.lat.toFixed(4)}°N
-          </span>
-        </div>
-        <span className="w-px h-3 bg-slate-700/80" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-400">空间基准:</span>
-          <span className="text-slate-200">CGCS2000 / WGS-84</span>
-        </div>
-        {activeFootprint && (
-          <>
-            <span className="w-px h-3 bg-slate-700/80" />
-            <div className="flex items-center gap-1.5 text-amber-300 text-[11px]">
-              <Sparkles className="w-3.5 h-3.5 flex-shrink-0 animate-pulse" />
-              <span className="truncate max-w-[180px] sm:max-w-xs">已叠置: {activeFootprint.title}</span>
-            </div>
-          </>
-        )}
-      </div>
-
       {/* 快捷交互操作条 (地球控制：3D/2D切换 / 全球全景视角 / 昼夜光照 / 正北重置，左上角垂直纵排) */}
       <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto">
         {/* 隐藏的飞抵探索触发器供外部/卡片静默调用 */}
@@ -1088,16 +1057,6 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
           ) : (
             <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300 group-hover:drop-shadow-[0_0_8px_rgba(165,180,252,0.6)]" />
           )}
-        </button>
-
-        {/* 正北重置 */}
-        <button
-          id="btn-reset-north"
-          onClick={handleResetNorth}
-          title="重置视角为正北朝向"
-          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-rose-500/60 rounded-xl text-slate-300 hover:text-white backdrop-blur-xl transition-all duration-200 hover:scale-105 shadow-2xl cursor-pointer group"
-        >
-          <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 group-hover:drop-shadow-[0_0_8px_rgba(251,113,133,0.6)]" />
         </button>
       </div>
     </div>

@@ -44,7 +44,6 @@ import {
   Check,
   RotateCw,
   BarChart3,
-  Compass,
   Sun,
   Moon,
   Radio,
@@ -3002,18 +3001,6 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                 ) : (
                   <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300 group-hover:drop-shadow-[0_0_8px_rgba(165,180,252,0.6)]" />
                 )}
-              </button>
-
-              {/* 正北/聚焦核心区重置 */}
-              <button
-                id="btn-reset-north-2d"
-                onClick={() => {
-                  setResetNorthTrigger2D((prev) => prev + 1);
-                }}
-                title="重置视角聚焦核心区"
-                className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-rose-500/60 rounded-xl text-slate-300 hover:text-white backdrop-blur-xl transition-all duration-200 hover:scale-105 shadow-2xl cursor-pointer group"
-              >
-                <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 group-hover:drop-shadow-[0_0_8px_rgba(251,113,133,0.6)]" />
               </button>
             </div>
 

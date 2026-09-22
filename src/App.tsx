@@ -1496,46 +1496,29 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
 
     setMessages(prev => [...prev, userMsg]);
 
-    const activeSat = satellites[0]; // 云尖沐曦号
+    const sat1 = satellites[0] || INITIAL_SATELLITES[0];
+    const sat2 = satellites[1] || INITIAL_SATELLITES[1] || { ...sat1, name: '02计算星', sensorPayload: '高分辨率红外热成像仪' };
 
-    // 可行性判定规则：目标区域超出星座覆盖范围（境外/极地/远洋）判定为不可行
-    const isOutOfCoverage = /境外|海外|南极|北极|太平洋|大西洋|印度洋/i.test(confirmedDraft.location || '');
+    // 辅助函数：从完整描述或载荷配置中提取简洁的相机名称
+    const extractCameraName = (rawPayload?: string, fallback = '智能宽幅多光谱相机') => {
+      if (!rawPayload) return fallback;
+      if (/宽幅多光谱|多光谱/i.test(rawPayload)) return '智能宽幅多光谱相机';
+      if (/红外|热成像/i.test(rawPayload)) return '高分辨率红外热成像仪';
+      if (/SAR|合成孔径雷达|雷达/i.test(rawPayload)) return 'C波段合成孔径雷达';
+      if (/高光谱/i.test(rawPayload)) return '高光谱成像仪';
+      if (/超高分/i.test(rawPayload)) return '超高分光学相机';
+      return rawPayload.split('+')[0].trim() || fallback;
+    };
 
-    if (isOutOfCoverage) {
-      const infeasibleThinking = `1. 提取经用户最终确认的 5 项任务要素：目标区域=${confirmedDraft.location}。
-2. 星历轨道与几何视场可行性解算：
-   - 现有星座（云尖沐曦号 / 天巡者03号等）轨道倾角与回归周期无法覆盖该区域。
-   - 在设定的任务起止时间窗内，无满足最低过境仰角要求的可用窗口。
-3. 综合可行性判定：【不可行 (INFEASIBLE)】。终止本次任务规划流程。`;
-
-      const infeasibleContent = `很抱歉，经星地轨道动力学与几何视场联合解算，该任务**【不可行】**：\n目标区域【${confirmedDraft.location}】超出现有星座覆盖范围，在您指定的时间窗口内无可用过境卫星。\n本次任务规划流程已终止，您可以重新描述任务需求或调整观测区域后再次尝试。`;
-
-      setTimeout(() => {
-        streamAssistantResponse({
-          messageId: asstMsgId,
-          thinking: infeasibleThinking,
-          content: infeasibleContent,
-          mode: 'regular',
-        });
-      }, 200);
-      return;
-    }
-
-    const thinking = `1. 提取经用户最终确认的 5 项任务要素。
-2. 星历轨道与几何视场可行性解算：
-   - 执行卫星：云尖沐曦号 (SSO 太阳同步轨道，降交点 10:30)
-   - 目标重访：在设定时间窗内存在 2 组最佳高仰角过境窗口 (78.5° 与 64.2°)
-   - 侧摆角需求：+4.8° / -6.2° (处于反作用飞轮安全力矩包络内)
-   - 气象预报：ECMWF 数值预报云量均 < 8%，满足无云高分推扫要求
-3. 综合可行性判定：【完全可行 (FEASIBLE)】。生成 2 组优选方案供用户选择。`;
-
-    const content = `经星地轨道动力学、载荷侧摆包络与气象云量联合解算，该任务**【完全可行】**！为您生成以下可选时段方案，请选择：`;
+    const sat1Camera = extractCameraName(confirmedDraft.payload || sat1.sensorPayload, '智能宽幅多光谱相机');
+    const sat2Camera = sat1Camera === '智能宽幅多光谱相机' ? '高分辨率红外热成像仪' : '智能宽幅多光谱相机';
 
     const timeSlotOptions: TimeSlotOption[] = [
       {
         id: 'slot-1',
         timeRange: '2026-09-01 14:28:30 (优选主窗口)',
-        satellite: activeSat.name,
+        satellite: sat1.name,
+        payload: sat1Camera,
         elevation: 78.5,
         swathWidth: '25 km 宽幅',
         cloudProbability: '< 5%',
@@ -1544,13 +1527,24 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       {
         id: 'slot-2',
         timeRange: '2026-09-02 10:15:20 (次选备用窗口)',
-        satellite: activeSat.name,
+        satellite: sat2.name,
+        payload: sat2Camera,
         elevation: 64.2,
         swathWidth: '25 km 宽幅',
         cloudProbability: '< 8%',
         selected: false,
       }
     ];
+
+    const thinking = `1. 提取经用户最终确认的 5 项任务要素。
+2. 星历轨道与几何视场可行性解算：
+   - 可用执行星：${sat1.name} 与 ${sat2.name} (SSO 太阳同步轨道)
+   - 目标重访：在设定时间窗内存在 2 组最佳高仰角过境窗口 (78.5° 与 64.2°)
+   - 侧摆角需求：+4.8° / -6.2° (处于反作用飞轮安全力矩包络内)
+   - 气象预报：ECMWF 数值预报云量均 < 8%，满足无云高分推扫要求
+3. 综合可行性判定：【完全可行 (FEASIBLE)】。生成 ${timeSlotOptions.length} 组由不同卫星执行的优选方案供用户选择。`;
+
+    const content = `经星地轨道动力学、载荷侧摆包络与气象云量联合解算，该任务**【完全可行】**！\n\n目前有 ${timeSlotOptions.length} 颗卫星能够执行任务，为您生成以下可选时段方案，请选择：`;
 
     setTimeout(() => {
       streamAssistantResponse({
@@ -1603,7 +1597,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     const coordinates = coordMatch ? coordMatch[1] : '30.2741° N, 119.9823° E';
 
     const thinking = `1. 提取用户选定方案：${slot.timeRange}，执行星=${slot.satellite}。
-2. 绑定任务要素：目标=${targetName}，坐标=${coordinates}，载荷=${confirmedDraft.payload}，在轨计算=${confirmedDraft.onboardComputing}。
+2. 绑定任务要素：目标=${targetName}，坐标=${coordinates}，载荷=${slot.payload || confirmedDraft.payload}，在轨计算=${confirmedDraft.onboardComputing}。
 3. 封装结构化任务单流水号：TASK-YJ-20260901-089，优先级=高 (P1)。
 4. 提示用户进行最终确认。`;
 
@@ -1615,7 +1609,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       coordinates,
       selectedTime: slot.timeRange,
       satelliteName: slot.satellite,
-      sensorMode: confirmedDraft.payload || '高分多光谱推扫 + 红外同步测温',
+      sensorMode: slot.payload || confirmedDraft.payload || '高分多光谱推扫 + 红外同步测温',
       resolution: '0.5m 全色 / 2.0m 多光谱',
       onboardComputing: confirmedDraft.onboardComputing || '是（星载边缘云判 + 红外火灾检测模型）',
       startTime: confirmedDraft.startTime,
