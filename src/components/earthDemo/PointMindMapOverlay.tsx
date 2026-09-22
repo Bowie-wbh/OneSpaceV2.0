@@ -695,9 +695,9 @@ export const PointMindMapOverlay: React.FC<PointMindMapOverlayProps> = ({
         );
       })}
 
-      {/* 二级数据列表面板：点击二级处理级别后，靠左且略微偏上展示其具体数据表格，半透明毛玻璃，在 2k 以下屏幕自适应更紧凑，避免大面积遮挡 */}
+      {/* 二级数据列表面板：点击二级处理级别后，放置在左下角工具栏右侧，半透明毛玻璃，在 2k 以下屏幕自适应更紧凑，避免遮挡左下角按钮 */}
       {selectedLevel2 && (
-        <div className="absolute left-3 sm:left-4 bottom-12 sm:bottom-14 pointer-events-auto z-40 w-[480px] lg:w-[540px] 2xl:w-[620px] max-w-[calc(100vw-1.5rem)] rounded-xl sm:rounded-2xl bg-black/60 border border-white/15 backdrop-blur-2xl shadow-2xl animate-fadeIn overflow-hidden">
+        <div className="absolute left-16 sm:left-20 bottom-3 sm:bottom-4 pointer-events-auto z-40 w-[480px] lg:w-[540px] 2xl:w-[620px] max-w-[calc(100vw-6rem)] rounded-xl sm:rounded-2xl bg-black/60 border border-white/15 backdrop-blur-2xl shadow-2xl animate-fadeIn overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/15 bg-white/[0.04]">
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <Database className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />

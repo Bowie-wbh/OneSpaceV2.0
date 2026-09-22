@@ -57,13 +57,8 @@ const TASK_FAILURE_REASONS = [
   '下传链路信噪比骤降，数据传输中断',
 ];
 
-const decideTaskOutcome = (totalSteps: number): { outcome: 'success' | 'failure'; failStepIndex?: number; failureReason?: string } => {
-  if (Math.random() >= 0.2) return { outcome: 'success' };
-  return {
-    outcome: 'failure',
-    failStepIndex: Math.floor(Math.random() * totalSteps),
-    failureReason: TASK_FAILURE_REASONS[Math.floor(Math.random() * TASK_FAILURE_REASONS.length)],
-  };
+const decideTaskOutcome = (_totalSteps: number): { outcome: 'success' | 'failure'; failStepIndex?: number; failureReason?: string } => {
+  return { outcome: 'success' };
 };
 
 // 一轨成像入境建链状态机参数：入境瞬间开始建链 → 建链结果 → 星上模型启动结果 → 可发指令 60s 窗口（失败则不可点）
@@ -380,6 +375,7 @@ export function App() {
   // 流式打字定时器与延迟定时器 Ref（用于支持用户点击中断按钮时立即终止生成）
   const activeStreamIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const activeStreamPendingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeStreamFinalizerRef = useRef<(() => void) | null>(null);
 
   // 中断当前正在进行的流式文本/报告生成
   const handleStopGenerating = () => {
@@ -390,6 +386,10 @@ export function App() {
     if (activeStreamIntervalRef.current) {
       clearInterval(activeStreamIntervalRef.current);
       activeStreamIntervalRef.current = null;
+    }
+    if (activeStreamFinalizerRef.current) {
+      activeStreamFinalizerRef.current();
+      activeStreamFinalizerRef.current = null;
     }
     setIsGenerating(false);
   };
@@ -512,7 +512,155 @@ export function App() {
     if (!session) return;
 
     // 载入历史示范会话
-    if (sessionId === 'sess-5') {
+    if (sessionId === 'sess-ningbo-1') {
+      setActiveTab('workspace');
+      setWorkspaceViewMode('split');
+      setWorkspaceKanbanFilter('task');
+      setSingleOrbitInjectedTask({
+        id: 'TASK-YJ-20260901-089',
+        satelliteName: '云尖沐曦号',
+        satelliteCode: 'SCS-04-15',
+        groundStation: '常规任务地面站',
+        timeRange: '2026-09-02 14:28:30 ~ 2026-09-02 14:36:50',
+        isImaging: true,
+        imagingTypeDesc: '高分辨率红外热成像与火情检测',
+        computingTask: '星载红外火灾反演模型',
+        starMode: '单星',
+        targetLocation: '宁波舟山港口及周边水域 (29.8821°N, 121.5642°E)',
+        taskMode: '常规模式',
+        payload: '高分辨率红外热成像仪 (热红外测温)',
+        isLive: false,
+        outcome: 'success',
+      });
+      setTaskFocusRequestId(id => id + 1);
+      setMessages([
+        {
+          id: 'hist-user-nb-1',
+          role: 'user',
+          content: '安排明天下午宁波港口的观测任务，并检测是否有火灾',
+          timestamp: '09:29',
+          mode: 'regular',
+        },
+        {
+          id: 'hist-asst-nb-1',
+          role: 'assistant',
+          thinkingProcess: '1. 多轮对话意图解析：用户提出观测需求【宁波港口火情观测】。\n2. 要素完整性检查：载荷、地点、在轨计算、时段已全部识别。\n3. 决策：列出全量要素清单供用户确认。',
+          content: '5 项任务关键要素已全部识别完毕！请确认以下任务要素信息是否准确无误：',
+          timestamp: '09:29',
+          mode: 'regular',
+          regularStage: 'requirement_review',
+          isActionConfirmed: true,
+          requirementDraft: {
+            payload: '高分辨率红外热成像仪 (热红外测温)',
+            location: '宁波舟山港口及周边水域 (29.8821°N, 121.5642°E)',
+            onboardComputing: '需要在轨计算：星载轻量化云雪快筛 + 红外火灾检测模型',
+            startTime: '2026-09-02 12:00:00',
+            endTime: '2026-09-02 18:00:00',
+            currentField: 'completed',
+          },
+        },
+        {
+          id: 'hist-user-nb-2',
+          role: 'user',
+          content: '确认上述任务要素信息，开始可行性分析与轨道方案解算',
+          timestamp: '09:30',
+          mode: 'regular',
+        },
+        {
+          id: 'hist-asst-nb-2',
+          role: 'assistant',
+          thinkingProcess: '1. 提取经确认的要素。\n2. 星历轨道解算：在明天下午时间窗内存在最佳高仰角过境窗口。\n3. 判定完全可行，生成可选方案。',
+          content: '经星地轨道动力学、载荷侧摆包络与气象云量联合解算，该任务**【完全可行】**！\n\n目前有 2 颗卫星能够执行任务，为您生成以下可选时段方案，请选择：',
+          timestamp: '09:30',
+          mode: 'regular',
+          regularStage: 'time_selection',
+          isActionConfirmed: true,
+          timeSlotOptions: [
+            {
+              id: 'slot-1',
+              timeRange: '2026-09-02 14:28:30 (优选主窗口)',
+              satellite: '云尖沐曦号',
+              payload: '高分辨率红外热成像仪',
+              elevation: 78.5,
+              swathWidth: '25 km 宽幅',
+              cloudProbability: '< 5%',
+              selected: true,
+            },
+            {
+              id: 'slot-2',
+              timeRange: '2026-09-02 16:15:20 (次选备用窗口)',
+              satellite: '之江天目01号',
+              payload: '智能宽幅多光谱相机',
+              elevation: 64.2,
+              swathWidth: '25 km 宽幅',
+              cloudProbability: '< 8%',
+              selected: false,
+            }
+          ],
+        },
+        {
+          id: 'hist-user-nb-3',
+          role: 'user',
+          content: '已选定方案：2026-09-02 14:28:30 (优选主窗口)（云尖沐曦号）',
+          timestamp: '09:31',
+          mode: 'regular',
+        },
+        {
+          id: 'hist-asst-nb-3',
+          role: 'assistant',
+          thinkingProcess: '1. 提取选定方案。\n2. 绑定任务要素并生成结构化任务单。',
+          content: '已为您生成【结构化任务单】，请核对并确认：',
+          timestamp: '09:31',
+          mode: 'regular',
+          regularStage: 'task_order_review',
+          isActionConfirmed: true,
+          structuredOrder: {
+            orderId: 'TASK-YJ-20260901-089',
+            targetName: '宁波舟山港口及周边水域',
+            coordinates: '29.8821°N, 121.5642°E',
+            selectedTime: '2026-09-02 14:28:30 (优选主窗口)',
+            satelliteName: '云尖沐曦号',
+            sensorMode: '高分辨率红外热成像仪 (热红外测温)',
+            resolution: '0.5m 全色 / 2.0m 多光谱',
+            onboardComputing: '需要在轨计算：星载轻量化云雪快筛 + 红外火灾检测模型',
+            startTime: '2026-09-02 12:00:00',
+            endTime: '2026-09-02 18:00:00',
+            priority: '高 (P1)',
+            createdTime: '2026-09-01 09:31:00',
+          },
+        },
+        {
+          id: 'hist-user-nb-4',
+          role: 'user',
+          content: '确认结构化任务单，立即发起任务',
+          timestamp: '09:32',
+          mode: 'regular',
+        },
+        {
+          id: 'hist-asst-nb-4',
+          role: 'assistant',
+          thinkingProcess: '1. 结构化任务单已确认，交由地面模型打包上注并下发。',
+          content: '任务已发起，请在右侧任务管理看板页查看执行进度。',
+          timestamp: '09:32',
+          mode: 'regular',
+          showGoToTaskButton: true,
+        },
+        {
+          id: 'hist-asst-nb-5',
+          role: 'assistant',
+          content: TASK_AND_COMMAND_ORDER_MESSAGE,
+          timestamp: '09:32',
+          mode: 'regular',
+        },
+        {
+          id: 'hist-asst-nb-6',
+          role: 'assistant',
+          content: '当前任务已完成。详细流程与结果请查看看板区任务详情。',
+          timestamp: '09:35',
+          mode: 'regular',
+        }
+      ]);
+    } else if (sessionId === 'sess-5') {
       setActiveTab('workspace');
       setWorkspaceViewMode('split');
       setWorkspaceKanbanFilter('task');
@@ -752,7 +900,7 @@ export function App() {
     // 1. 提取载荷
     if (/光学|多光谱|高分|可见光|全色|相机/i.test(text)) {
       draft.payload = '高分多光谱光学相机 (0.5m全色/2m多光谱)';
-    } else if (/红外|热红外|热成像|测温/i.test(text)) {
+    } else if (/红外|热红外|热成像|测温|火灾|火情/i.test(text)) {
       draft.payload = '高分辨率红外热成像仪 (热红外测温)';
     } else if (/sar|雷达|微波|合成孔径/i.test(text)) {
       draft.payload = 'C波段合成孔径雷达 (SAR 全天候)';
@@ -808,6 +956,9 @@ export function App() {
         const parts = text.split(/至|到|~/);
         draft.startTime = parts[0].trim() || '2026-09-01 08:00:00';
         draft.endTime = parts[1]?.trim() || '2026-09-02 18:00:00';
+      } else if (text.includes('明天') && (text.includes('下午') || text.includes('晚上'))) {
+        draft.startTime = '2026-09-02 12:00:00';
+        draft.endTime = '2026-09-02 18:00:00';
       } else if (text.includes('明天')) {
         draft.startTime = '2026-09-02 08:00:00';
         draft.endTime = '2026-09-02 18:00:00';
@@ -1711,6 +1862,9 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     }, 200);
   };
 
+  // 任务与指令单标准模板内容（在“任务包组装与发送”环节发送）
+  const TASK_AND_COMMAND_ORDER_MESSAGE = `已生成任务和指令单。\n\n任务单：\n{ "validity_period": [ "2026-09-22 07:15:49", "2026-09-25 07:15:49" ], "location_diameter": 3, "observation_mode": "single", "resolution": "default", "sensor_type": "optical", "location_type": "point", "admin_region": [ "俄罗斯", "萨哈共和国 (Sakha Rep.)" ], "task_priority": 5, "time_priority": 5, "task_mode": "imaging_compute", "intent_type": "control", "quality_priority": 3, "location": "俄罗斯萨哈共和国 (Sakha Rep.)" }\n{ "task_mode": "imaging_compute", "intent_type": "control", "action": "run_algorithm", "_source": "CAPABILITY_BYPASS", "algorithm_id": "fire_detection" }\n\n指令单：\n00FEABCD010201002C0001010004030300000102A5CC6807EC6D580000000001F40CA67BCF0CA7DA5A00015F05000201006AB1F2B802003101869F031A00AA40D9A612D0340A74378AD4DB000038EB377103E70EE2DB2937930041060C0A432AF05859DE45AB00037E5288000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000035`;
+
   // 确认任务单后发起常规任务：跳转任务管理看板对应详情页，地面任务规划逐步呈现，星上处理流程默认折叠且直接呈现完成状态
   const launchRegularTask = (order: StructuredTaskOrder, draft: TaskRequirementDraft) => {
     const activeSat = satellites.find(s => s.name === order.satelliteName) || satellites[0];
@@ -1740,6 +1894,16 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     setWorkspaceKanbanFilter('task');
     setWorkspaceViewMode(prev => (prev === 'chat' ? 'split' : prev));
     setIsChatLocked(true);
+
+    // 地面大模型在“任务包组装与发送”阶段（第 2 步，2 * FLOW_STEP_INTERVAL_MS）发送任务单与指令单
+    setTimeout(() => {
+      const orderMsgId = 'msg-' + Date.now();
+      streamAssistantResponse({
+        messageId: orderMsgId,
+        content: TASK_AND_COMMAND_ORDER_MESSAGE,
+        mode: 'regular',
+      });
+    }, 2 * FLOW_STEP_INTERVAL_MS);
 
     // 动画结束（成功走完地面全部步骤，或失败在对应步骤处冻结）后，向对话流反馈结果并解锁输入框
     const animatedSteps = outcome === 'failure' ? Math.min((failStepIndex ?? 0) + 1, GROUND_STAGE_STEP_COUNT) : GROUND_STAGE_STEP_COUNT;
@@ -1878,6 +2042,50 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       clearTimeout(activeStreamPendingTimeoutRef.current);
       activeStreamPendingTimeoutRef.current = null;
     }
+    // 若上一条消息正在流式输出，立即将其补全为完整内容，防止被后续消息截断
+    if (activeStreamFinalizerRef.current) {
+      activeStreamFinalizerRef.current();
+      activeStreamFinalizerRef.current = null;
+    }
+
+    const finalizeCurrentMessage = () => {
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === messageId) {
+          return {
+            ...msg,
+            thinkingProcess: thinking || undefined,
+            content,
+            regularStage,
+            timeSlotOptions,
+            structuredOrder,
+            requirementDraft,
+            onboardFlowType,
+            timeSeriesStage,
+            timeSeriesPlans,
+            activeDayIndex,
+            flowSteps,
+            currentStepIndex,
+            resultImage,
+            fireDetected,
+            fireHotspots,
+            qaTargetLocation,
+            qaWindowOptions,
+            showGoToAppButton,
+            showGoToAchievementButton,
+            showGoToTaskButton,
+            isOnboardFlowPending,
+            timeSeriesHighRiskLocations,
+            confirmChoice,
+            table,
+            analysisResult,
+            quickReplyOptions,
+          };
+        }
+        return msg;
+      }));
+    };
+
+    activeStreamFinalizerRef.current = finalizeCurrentMessage;
 
     setMessages(prev => [...prev, asstMsg]);
     setIsGenerating(true);
@@ -1890,8 +2098,8 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     const streamInterval = setInterval(() => {
       // 1. 打字机逐字输出思考过程
       if (thinkingCharIndex < thinkingTotal) {
-        // 每次前进一步 2~4 个字符（兼顾打字机质感与响应速度）
-        const step = Math.min(3, thinkingTotal - thinkingCharIndex);
+        // 每次前进一步 3~6 个字符（兼顾打字机质感与响应速度）
+        const step = Math.min(6, thinkingTotal - thinkingCharIndex);
         thinkingCharIndex += step;
         const currentThinking = thinking.slice(0, thinkingCharIndex);
 
@@ -1907,8 +2115,9 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       }
       // 2. 思考过程完成后，打字机逐字输出正文内容
       else if (contentCharIndex < contentTotal) {
-        const step = Math.min(2, contentTotal - contentCharIndex);
-        contentCharIndex += step;
+        // 自适应步长：长文本（如指令单）按比例大幅增加步长，确保快速完整呈现
+        const step = Math.max(4, Math.min(40, Math.ceil(contentTotal / 25)));
+        contentCharIndex = Math.min(contentTotal, contentCharIndex + step);
         const currentContent = content.slice(0, contentCharIndex);
 
         setMessages(prev => prev.map(msg => {
@@ -1927,44 +2136,11 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         clearInterval(streamInterval);
         if (activeStreamIntervalRef.current === streamInterval) {
           activeStreamIntervalRef.current = null;
+          activeStreamFinalizerRef.current = null;
         }
         setIsGenerating(false);
 
-        // 流式打字完成后挂载后续阶段的交互/卡片
-        setMessages(prev => prev.map(msg => {
-          if (msg.id === messageId) {
-            return {
-              ...msg,
-              thinkingProcess: thinking || undefined,
-              content,
-              regularStage,
-              timeSlotOptions,
-              structuredOrder,
-              requirementDraft,
-              onboardFlowType,
-              timeSeriesStage,
-              timeSeriesPlans,
-              activeDayIndex,
-              flowSteps,
-              currentStepIndex,
-              resultImage,
-              fireDetected,
-              fireHotspots,
-              qaTargetLocation,
-              qaWindowOptions,
-              showGoToAppButton,
-              showGoToAchievementButton,
-              showGoToTaskButton,
-              isOnboardFlowPending,
-              timeSeriesHighRiskLocations,
-              confirmChoice,
-              table,
-              analysisResult,
-              quickReplyOptions,
-            };
-          }
-          return msg;
-        }));
+        finalizeCurrentMessage();
 
         if (onFinish) {
           onFinish();
@@ -2023,7 +2199,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       return;
     }
 
-    setPrefillPrompt('请立即拍照，并检测火灾');
+    setPrefillPrompt('请监测当前位置是否有火灾');
   };
 
   // 将新发起的一轨成像任务注入任务管理看板，并自动切换看板区展示与锁定输入框
@@ -2060,6 +2236,16 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     setWorkspaceKanbanFilter('task');
     setWorkspaceViewMode(prev => (prev === 'chat' ? 'split' : prev));
     setIsChatLocked(true);
+
+    // 地面大模型在“任务包组装与发送”阶段（第 2 步，2 * FLOW_STEP_INTERVAL_MS）发送任务单与指令单
+    setTimeout(() => {
+      const orderMsgId = 'msg-' + Date.now();
+      streamAssistantResponse({
+        messageId: orderMsgId,
+        content: TASK_AND_COMMAND_ORDER_MESSAGE,
+        mode: 'single_orbit',
+      });
+    }, 2 * FLOW_STEP_INTERVAL_MS);
 
     // 动画结束（成功走完全部步骤，或失败在对应步骤处冻结）后，向对话流反馈结果并解锁输入框
     const animatedSteps = outcome === 'failure' ? Math.min((failStepIndex ?? 0) + 1, totalSteps) : totalSteps;
@@ -2746,7 +2932,16 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
 
     if (lower.includes('长时序') || lower.includes('多日') || lower.includes('周期') || lower.includes('连续')) {
       handleUploadTimeSeriesFile();
-    } else if (lower.includes('一轨即时') || lower.includes('单轨即时') || lower.includes('黄金窗口') || lower.includes('请立即拍照')) {
+    } else if (
+      lower.includes('一轨即时') || 
+      lower.includes('单轨即时') || 
+      lower.includes('黄金窗口') || 
+      lower.includes('请立即拍照') ||
+      lower.includes('当前位置') ||
+      lower.includes('检测当前位置') ||
+      lower.includes('监测当前位置') ||
+      (lower.includes('当前') && (lower.includes('火灾') || lower.includes('火情') || lower.includes('拍照') || lower.includes('成像')))
+    ) {
       handleSingleOrbitFlow(text);
     } else if (messages.length === 0 || lower.includes('拍') || lower.includes('监测') || lower.includes('观测') || lower.includes('任务') || lower.includes('安排') || lower.includes('宁波') || lower.includes('火灾')) {
       handleRegularFlow(text);

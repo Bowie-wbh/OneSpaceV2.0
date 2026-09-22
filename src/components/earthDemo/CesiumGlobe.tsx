@@ -18,7 +18,8 @@ import {
   Sun, 
   Moon, 
   Flame,
-  Building2
+  Building2,
+  CloudSun,
 } from 'lucide-react';
 
 declare const Cesium: any;
@@ -113,10 +114,10 @@ const createBuildingMarkerCanvas = (isSelected = false): string => {
   return canvas.toDataURL();
 };
 
-// 生成卫星图标 Canvas (极简卫星本体 + 两侧太阳能板，选中状态与火点/建筑标绘统一采用外圈光圈 + 柔光晕视觉语言)
+// 生成卫星图标 Canvas (极简卫星本体 + 两侧太阳能板，选中状态与火点/建筑标绘统一采用外圈光圈 + 柔光晕视觉语言，黄色高亮)
 const createSatelliteMarkerCanvas = (isSelected = false): string => {
   const canvas = document.createElement('canvas');
-  const size = 48;
+  const size = 64;
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
@@ -124,76 +125,102 @@ const createSatelliteMarkerCanvas = (isSelected = false): string => {
 
   const cx = size / 2;
   const cy = size / 2;
-  const color = '#38bdf8';
-  const ringColor = 'rgba(56, 189, 248, 0.55)';
-  const glowColor = 'rgba(56, 189, 248, 0.85)';
-  const bodyRadius = 11; // 卫星本体外接半径，作为选中光圈基准，与火点/建筑标绘尺寸比例保持一致
+  const color = isSelected ? '#facc15' : '#38bdf8';
+  const ringColor = isSelected ? 'rgba(250, 204, 21, 0.65)' : 'rgba(56, 189, 248, 0.55)';
+  const glowColor = isSelected ? 'rgba(250, 204, 21, 0.95)' : 'rgba(56, 189, 248, 0.85)';
+  const bodyRadius = 14;
 
-  // 选中态外圈光圈（与火点/建筑标绘选中态视觉语言保持一致）
+  // 选中态外圈光圈（双层扩散高亮发光环）
   if (isSelected) {
     ctx.beginPath();
-    ctx.arc(cx, cy, bodyRadius + 4, 0, Math.PI * 2);
+    ctx.arc(cx, cy, bodyRadius + 6, 0, Math.PI * 2);
     ctx.strokeStyle = ringColor;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, bodyRadius + 11, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.35)';
+    ctx.lineWidth = 2;
     ctx.stroke();
   }
 
   ctx.save();
   ctx.shadowColor = glowColor;
-  ctx.shadowBlur = isSelected ? 12 : 4;
+  ctx.shadowBlur = isSelected ? 16 : 8;
   ctx.translate(cx, cy);
   ctx.rotate(Math.PI / 4);
 
-  // 两侧太阳能板
+  // 两侧太阳能板（加大尺寸、提升清晰度与明显度）
   ctx.fillStyle = color;
   ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  ctx.fillRect(-9, -2.5, 5, 5);
-  ctx.strokeRect(-9, -2.5, 5, 5);
-  ctx.fillRect(4, -2.5, 5, 5);
-  ctx.strokeRect(4, -2.5, 5, 5);
+  ctx.lineWidth = 1.2;
+
+  // 左侧太阳能板
+  ctx.fillRect(-13, -3.5, 7, 7);
+  ctx.strokeRect(-13, -3.5, 7, 7);
+
+  // 右侧太阳能板
+  ctx.fillRect(6, -3.5, 7, 7);
+  ctx.strokeRect(6, -3.5, 7, 7);
 
   // 连接杆
-  ctx.fillRect(-4, -0.75, 8, 1.5);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(-6, -1.2, 12, 2.4);
 
   // 卫星本体
   ctx.beginPath();
-  ctx.rect(-2.5, -2.5, 5, 5);
-  ctx.fillStyle = '#ffffff';
+  ctx.rect(-3.5, -3.5, 7, 7);
+  ctx.fillStyle = isSelected ? '#fef08a' : '#ffffff';
   ctx.fill();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
+
+  // 卫星核心天线点
+  ctx.beginPath();
+  ctx.arc(0, 0, 1.6, 0, Math.PI * 2);
+  ctx.fillStyle = isSelected ? '#ca8a04' : '#0284c7';
+  ctx.fill();
 
   ctx.restore();
 
   return canvas.toDataURL();
 };
 
-// 卫星真彩色底图图层构建函数（使用 Cesium 1.125 官方标准的 ArcGisMapServerImageryProvider.fromUrl 异步提供器及双重保险备用）
+// 高德全球卫星影像底图与注记服务（国内官方直连、高速稳定且全球覆盖）
+// 国内直连全球高清卫星底图图层构建函数（高德全球卫星遥感底图 style=6）
 const createSatelliteBaseLayer = () => {
   try {
-    if (Cesium.ArcGisMapServerImageryProvider && typeof Cesium.ArcGisMapServerImageryProvider.fromUrl === 'function') {
-      const providerPromise = Cesium.ArcGisMapServerImageryProvider.fromUrl(
-        'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
-        {
-          enablePickFeatures: false,
-          usePreCachedTilesIfAvailable: true,
-        }
-      );
-      return Cesium.ImageryLayer.fromProviderAsync(providerPromise);
-    }
+    const amapProvider = new Cesium.UrlTemplateImageryProvider({
+      url: 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
+      subdomains: ['1', '2', '3', '4'],
+      maximumLevel: 18,
+      tilingScheme: new Cesium.WebMercatorTilingScheme(),
+      credit: '高德全球遥感影像 (AutoNavi)',
+    });
+    return new Cesium.ImageryLayer(amapProvider);
   } catch (err) {
-    console.warn('Failed to initialize ArcGisMapServerImageryProvider fromUrl:', err);
+    console.warn('Failed to initialize AutoNavi ImageryProvider:', err);
+    return null;
   }
+};
 
-  // 备用：基于切片服务模板的卫星影像图层
-  const fallbackProvider = new Cesium.UrlTemplateImageryProvider({
-    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    maximumLevel: 19,
-    credit: '© Esri, Earthstar Geographics',
-  });
-  return new Cesium.ImageryLayer(fallbackProvider);
+// 国内直连全球中文地名与道路行政区划注记图层构建函数（高德路网与注记 style=8）
+const createAnnotationLayer = () => {
+  try {
+    const annotationProvider = new Cesium.UrlTemplateImageryProvider({
+      url: 'https://webst0{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}',
+      subdomains: ['1', '2', '3', '4'],
+      maximumLevel: 18,
+      tilingScheme: new Cesium.WebMercatorTilingScheme(),
+      credit: '高德全球注记与路网',
+    });
+    return new Cesium.ImageryLayer(annotationProvider);
+  } catch (err) {
+    console.warn('Failed to initialize AutoNavi Annotation ImageryProvider:', err);
+    return null;
+  }
 };
 
 interface CesiumGlobeProps {
@@ -216,6 +243,8 @@ interface CesiumGlobeProps {
   onToggleDimension?: () => void;
   onSelectSatellite?: (code: string) => void;
   selectedSatelliteId?: string | null;
+  showWeatherForecast?: boolean;
+  onToggleWeatherForecast?: () => void;
 }
 
 export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
@@ -237,6 +266,8 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
   onToggleDimension,
   onSelectSatellite,
   selectedSatelliteId = 'scs-04-16',
+  showWeatherForecast = false,
+  onToggleWeatherForecast,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
@@ -381,10 +412,10 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
       if (viewerRef.current || !containerRef.current) return;
 
       try {
-        const esriBaseLayer = createSatelliteBaseLayer();
+        const baseLayer = createSatelliteBaseLayer();
 
         const viewer = new Cesium.Viewer(containerRef.current, {
-          baseLayer: esriBaseLayer,
+          baseLayer: baseLayer,
           baseLayerPicker: false,
           geocoder: false,
           homeButton: false,
@@ -396,24 +427,29 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
           vrButton: false,
           infoBox: false,
           selectionIndicator: false,
+          creditContainer: document.createElement('div'), // 挂载到独立隐藏 DOM，杜绝左下角 Cesium ion / Data attribution 水印显示
           terrainProvider: new Cesium.EllipsoidTerrainProvider(),
           skyAtmosphere: new Cesium.SkyAtmosphere(),
         });
 
+        // 彻底移除底部的 Credit 容器 DOM
+        if (viewer.cesiumWidget && viewer.cesiumWidget.creditContainer) {
+          viewer.cesiumWidget.creditContainer.style.display = 'none';
+        }
+        if (viewer.bottomContainer) {
+          viewer.bottomContainer.style.display = 'none';
+        }
+
+        // 叠加中文注记与行政区划标注图层
+        const annotationLayer = createAnnotationLayer();
+        if (annotationLayer) {
+          viewer.imageryLayers.add(annotationLayer);
+        }
+
         // 监听底图就绪与容错回退
-        if (esriBaseLayer && esriBaseLayer.errorEvent) {
-          esriBaseLayer.errorEvent.addEventListener((err: any) => {
-            console.warn('Esri World Imagery async load failed, fallback to direct tile URL:', err);
-            if (viewer && !viewer.isDestroyed()) {
-              viewer.imageryLayers.removeAll();
-              viewer.imageryLayers.addImageryProvider(
-                new Cesium.UrlTemplateImageryProvider({
-                  url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                  maximumLevel: 19,
-                  credit: '© Esri, Earthstar Geographics',
-                })
-              );
-            }
+        if (baseLayer && baseLayer.errorEvent) {
+          baseLayer.errorEvent.addEventListener((err: any) => {
+            console.warn('Primary satellite imagery load failed, fallback:', err);
           });
         }
 
@@ -754,6 +790,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
       };
 
       // 惯性轨道空间圆环
+      const isInitialSelected = satItem.id === (internalSelectedSatId || 'scs-04-16');
       const orbitEntity = viewer.entities.add({
         id: `satellite-orbit-${satItem.id}`,
         name: `${satItem.code} 惯性空间轨道`,
@@ -761,15 +798,15 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
           positions: new Cesium.CallbackProperty(() => {
             return computeInertialOrbitPositions(new Date());
           }, false),
-          width: satItem.id === 'scs-04-16' ? 1.5 : 1.2,
-          material: satItem.id === 'scs-04-16'
-            ? Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.65)
-            : Cesium.Color.fromCssColorString('#0ea5e9').withAlpha(0.35),
+          width: isInitialSelected ? 2.8 : 1.2,
+          material: isInitialSelected
+            ? Cesium.Color.fromCssColorString('#facc15').withAlpha(0.95)
+            : Cesium.Color.fromCssColorString('#0ea5e9').withAlpha(0.28),
           arcType: Cesium.ArcType.NONE,
         },
       });
 
-      // 卫星实时星体位置：基于 ECI 惯性坐标动力学严格解算（不禁用深度测试，使卫星运行到地球背面时被地球球体自然遮挡）
+      // 卫星实时星体位置：基于 ECI 惯性坐标动力学严格解算（加大明显度，不禁用深度测试）
       const satEntity = viewer.entities.add({
         id: `satellite-${satItem.id}`,
         name: satItem.code,
@@ -782,22 +819,23 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
           return new Cesium.Cartesian3(ecf.x * 1000, ecf.y * 1000, ecf.z * 1000);
         }, false),
         billboard: {
-          image: satelliteNormalUrlRef.current,
-          width: 20,
-          height: 20,
+          image: isInitialSelected ? satelliteSelectedUrlRef.current : satelliteNormalUrlRef.current,
+          width: 30,
+          height: 30,
+          scaleByDistance: new Cesium.NearFarScalar(1.5e3, 1.25, 2.0e7, 0.85),
           verticalOrigin: Cesium.VerticalOrigin.CENTER,
           horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
         },
         label: {
           text: satItem.code,
-          font: '12px sans-serif',
-          fillColor: Cesium.Color.fromCssColorString('#e0f2fe'),
+          font: 'bold 12px sans-serif',
+          fillColor: isInitialSelected ? Cesium.Color.fromCssColorString('#facc15') : Cesium.Color.fromCssColorString('#e0f2fe'),
           outlineColor: Cesium.Color.BLACK,
           outlineWidth: 2,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           verticalOrigin: Cesium.VerticalOrigin.TOP,
-          pixelOffset: new Cesium.Cartesian2(0, 14),
-          show: false,
+          pixelOffset: new Cesium.Cartesian2(0, 16),
+          show: isInitialSelected,
         },
       });
 
@@ -868,7 +906,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
     });
   }, [selectedPointId, cesiumReady]);
 
-  // 根据选中状态高亮全星座中对应的卫星图标、放大比例并显示编号标签
+  // 根据选中状态高亮全星座中对应的卫星图标、放大比例并显示编号标签（选中卫星和轨道变黄）
   useEffect(() => {
     if (!viewerRef.current || !cesiumReady) return;
 
@@ -878,15 +916,18 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
         satObj.entity.billboard.image = isSelected
           ? satelliteSelectedUrlRef.current
           : satelliteNormalUrlRef.current;
-        satObj.entity.billboard.scale = isSelected ? 1.3 : 1.0;
+        satObj.entity.billboard.scale = isSelected ? 1.4 : 1.0;
         if (satObj.entity.label) {
           satObj.entity.label.show = isSelected;
+          satObj.entity.label.fillColor = isSelected
+            ? Cesium.Color.fromCssColorString('#facc15')
+            : Cesium.Color.fromCssColorString('#e0f2fe');
         }
       }
       if (satObj.orbitEntity && satObj.orbitEntity.polyline) {
-        satObj.orbitEntity.polyline.width = isSelected ? 2.0 : 1.2;
+        satObj.orbitEntity.polyline.width = isSelected ? 2.8 : 1.2;
         satObj.orbitEntity.polyline.material = isSelected
-          ? Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85)
+          ? Cesium.Color.fromCssColorString('#facc15').withAlpha(0.95)
           : Cesium.Color.fromCssColorString('#0ea5e9').withAlpha(0.28);
       }
     });
@@ -1004,8 +1045,8 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
         </div>
       )}
 
-      {/* 快捷交互操作条 (地球控制：3D/2D切换 / 全球全景视角 / 昼夜光照 / 正北重置，左上角垂直纵排) */}
-      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto">
+      {/* 快捷交互操作条 (地球控制：3D/2D切换 / 全球全景视角 / 昼夜光照 / 正北重置，左下角垂直纵排) */}
+      <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto">
         {/* 隐藏的飞抵探索触发器供外部/卡片静默调用 */}
         <button
           id="btn-fly-fenghuang"
@@ -1058,6 +1099,22 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
             <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300 group-hover:drop-shadow-[0_0_8px_rgba(165,180,252,0.6)]" />
           )}
         </button>
+
+        {/* 气象环境预报看板切换按钮 */}
+        {onToggleWeatherForecast && (
+          <button
+            id="btn-toggle-weather-forecast-3d"
+            onClick={onToggleWeatherForecast}
+            title={showWeatherForecast ? '关闭气象环境预报看板' : '打开气象环境预报看板 (多机场15天逐小时多要素时序)'}
+            className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-900/90 hover:bg-slate-800 border rounded-xl backdrop-blur-xl transition-all duration-200 hover:scale-105 shadow-2xl cursor-pointer group ${
+              showWeatherForecast
+                ? 'border-sky-400 bg-sky-950/60 shadow-[0_0_15px_rgba(56,189,248,0.4)] text-sky-300'
+                : 'border-slate-700/80 hover:border-sky-500/60 text-slate-300 hover:text-white'
+            }`}
+          >
+            <CloudSun className={`w-4 h-4 sm:w-5 sm:h-5 ${showWeatherForecast ? 'text-sky-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]' : 'text-sky-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]'}`} />
+          </button>
+        )}
       </div>
     </div>
   );

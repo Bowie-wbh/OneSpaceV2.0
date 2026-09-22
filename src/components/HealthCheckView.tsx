@@ -482,14 +482,14 @@ export const MarkdownMessageContent: React.FC<{ content: string }> = ({ content 
 
     // 普通段落
     elements.push(
-      <p key={`p-${i}`} className="text-xs sm:text-sm leading-relaxed text-slate-800 dark:text-slate-200 my-1">
+      <p key={`p-${i}`} className="text-xs sm:text-sm leading-relaxed text-slate-800 dark:text-slate-200 my-1 break-all break-words">
         {renderInlineMarkdown(line)}
       </p>
     );
     i++;
   }
 
-  return <div className="space-y-1 font-sans text-left">{elements}</div>;
+  return <div className="space-y-1 font-sans text-left break-all break-words">{elements}</div>;
 };
 
 // 生成路由系统评估报告 Markdown 内容

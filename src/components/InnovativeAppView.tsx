@@ -6,6 +6,7 @@ import { CesiumGlobe } from './earthDemo/CesiumGlobe';
 import { PointMindMapOverlay } from './earthDemo/PointMindMapOverlay';
 import { HistoryDataDrawer } from './earthDemo/HistoryDataDrawer';
 import { RecordDetailModal } from './earthDemo/RecordDetailModal';
+import { WeatherForecastBar, AirportWeatherItem, AIRPORT_WEATHER_LIST } from './earthDemo/WeatherForecastBar';
 import { DataTypeCategory, HistoryRecord } from '../types/earthDemoTypes';
 import { 
   EARTH_OBJECTS, 
@@ -46,10 +47,12 @@ import {
   BarChart3,
   Sun,
   Moon,
+  CloudSun,
   Radio,
   Database,
   Cpu,
   Menu,
+  Clock,
   Satellite as SatelliteIcon
 } from 'lucide-react';
 import { INITIAL_SATELLITES } from '../data/satelliteData';
@@ -326,18 +329,18 @@ function createSatelliteConstellationIcon(sat: ConstellationSatelliteItem, isSel
   if (_satelliteIconCache[cacheKey]) return _satelliteIconCache[cacheKey];
 
   const isMain = sat.id === 'scs-04-16';
-  const mainColor = isSelected ? '#38bdf8' : (isMain ? '#38bdf8' : '#0ea5e9');
-  const glowColor = isSelected ? 'rgba(56,189,248,0.7)' : (isMain ? 'rgba(56,189,248,0.45)' : 'rgba(14,165,233,0.3)');
-  const borderStyle = isSelected ? '2px solid #38bdf8' : '1.5px solid rgba(56,189,248,0.7)';
-  const bgStyle = isSelected ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.85)';
-  const size = isSelected ? 36 : (isMain ? 32 : 28);
-  const iconBoxSize = isSelected ? 26 : (isMain ? 22 : 20);
+  const mainColor = isSelected ? '#facc15' : (isMain ? '#38bdf8' : '#38bdf8');
+  const glowColor = isSelected ? 'rgba(250,204,21,0.85)' : (isMain ? 'rgba(56,189,248,0.55)' : 'rgba(14,165,233,0.35)');
+  const borderStyle = isSelected ? '2px solid #facc15' : (isMain ? '1.8px solid #38bdf8' : '1.5px solid rgba(56,189,248,0.7)');
+  const bgStyle = isSelected ? 'rgba(28,24,6,0.95)' : 'rgba(15,23,42,0.9)';
+  const size = isSelected ? 44 : (isMain ? 38 : 34);
+  const iconBoxSize = isSelected ? 32 : (isMain ? 27 : 24);
 
   const html = `
     <div style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-      ${isSelected || isMain ? `<div style="position:absolute;width:${size - 4}px;height:${size - 4}px;border-radius:50%;background:${glowColor};filter:blur(3px);animation:pulse 2s infinite;"></div>` : ''}
-      <div style="position:absolute;width:${iconBoxSize}px;height:${iconBoxSize}px;border-radius:7px;background:${bgStyle};border:${borderStyle};display:flex;align-items:center;justify-content:center;box-shadow:0 0 ${isSelected ? 12 : 6}px ${glowColor};transition:all 0.2s;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="${iconBoxSize - 10}" height="${iconBoxSize - 10}" viewBox="0 0 24 24" fill="none" stroke="${mainColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      ${isSelected || isMain ? `<div style="position:absolute;width:${size - 2}px;height:${size - 2}px;border-radius:50%;background:${glowColor};filter:blur(3.5px);animation:pulse 2s infinite;"></div>` : ''}
+      <div style="position:absolute;width:${iconBoxSize}px;height:${iconBoxSize}px;border-radius:8px;background:${bgStyle};border:${borderStyle};display:flex;align-items:center;justify-content:center;box-shadow:0 0 ${isSelected ? 16 : 8}px ${glowColor};transition:all 0.2s;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="${iconBoxSize - 10}" height="${iconBoxSize - 10}" viewBox="0 0 24 24" fill="none" stroke="${mainColor}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
           <path d="M13 7 9 3 5 7l4 4"/>
           <path d="m17 11 4 4-4 4-4-4"/>
           <path d="m8 12 4 4 6-6-4-4Z"/>
@@ -345,10 +348,9 @@ function createSatelliteConstellationIcon(sat: ConstellationSatelliteItem, isSel
           <path d="M9 21a6 6 0 0 0-6-6"/>
         </svg>
       </div>
-      ${isSelected || isMain ? `
-      <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:1px 5px;border-radius:4px;background:rgba(15,23,42,0.9);border:1px solid ${isSelected ? '#38bdf8' : 'rgba(56,189,248,0.4)'};color:${isSelected ? '#38bdf8' : '#e0f2fe'};font-size:10px;font-weight:bold;font-family:monospace;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,0.5);">
+      <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:1px 6px;border-radius:4px;background:rgba(15,23,42,0.92);border:1px solid ${isSelected ? '#facc15' : 'rgba(56,189,248,0.4)'};color:${isSelected ? '#facc15' : '#e0f2fe'};font-size:10px;font-weight:bold;font-family:monospace;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,0.6);">
         ${sat.code}
-      </div>` : ''}
+      </div>
     </div>
   `;
 
@@ -1011,7 +1013,8 @@ function MonitorSection({
 interface MonitorCardProps {
   title: string;
   status: '未开始' | '进行中' | '已结束';
-  capturedRegions: number;
+  completedTasks?: number;
+  capturedRegions?: number;
   totalPhotos: number;
   firePoints: number;
   startDate: string;
@@ -1027,13 +1030,16 @@ interface MonitorCardProps {
   onToggleBuildingSpatial: () => void;
   selectedSpatialPointId: string | null;
   onSelectSpatialPoint: (point: SpatialMarkerPoint | null) => void;
-  monitorActiveTab?: 'spatial' | 'satellite';
-  onMonitorTabChange?: (tab: 'spatial' | 'satellite') => void;
+  selectedSatelliteId?: string;
+  onSelectSatelliteId?: (id: string) => void;
+  monitorActiveCategory?: 'fire' | 'building' | 'satellite';
+  onMonitorCategoryChange?: (category: 'fire' | 'building' | 'satellite') => void;
 }
 
 function MonitorCard({
   title,
   status,
+  completedTasks = 15,
   capturedRegions,
   totalPhotos,
   firePoints,
@@ -1052,132 +1058,101 @@ function MonitorCard({
   onSelectSpatialPoint,
   selectedSatelliteId,
   onSelectSatelliteId,
-  monitorActiveTab,
-  onMonitorTabChange,
-}: MonitorCardProps & { selectedSatelliteId?: string; onSelectSatelliteId?: (id: string) => void }) {
+  monitorActiveCategory,
+  onMonitorCategoryChange,
+}: MonitorCardProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [internalActiveTab, setInternalActiveTab] = useState<'spatial' | 'satellite'>('spatial');
-  const activeTab = monitorActiveTab ?? internalActiveTab;
-  const setActiveTab = (tab: 'spatial' | 'satellite') => {
-    setInternalActiveTab(tab);
-    onMonitorTabChange?.(tab);
+  const [internalActiveCategory, setInternalActiveCategory] = useState<'fire' | 'building' | 'satellite'>('fire');
+  const activeCategory = monitorActiveCategory ?? internalActiveCategory;
+  const setActiveCategory = (cat: 'fire' | 'building' | 'satellite') => {
+    setInternalActiveCategory(cat);
+    onMonitorCategoryChange?.(cat);
   };
 
-  const [isSpatialCategoryOpen, setIsSpatialCategoryOpen] = useState(false);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [isCycleOpen, setIsCycleOpen] = useState(false);
-
-  // 卫星看板内部状态
-  const [isSatOpen, setIsSatOpen] = useState(false);
-  const [coordOpen, setCoordOpen] = useState(true);
-  const [payloadOpen, setPayloadOpen] = useState(true);
-  const [modelOpen, setModelOpen] = useState(true);
-  const [usageOpen, setUsageOpen] = useState(true);
+  const [isTimeOpen, setIsTimeOpen] = useState(false);
 
   const satId = selectedSatelliteId || 'scs-04-16';
-  const activeSatellite = SATELLITE_DASHBOARD_LIST.find((s) => s.id === satId) ?? SATELLITE_DASHBOARD_LIST[0];
 
-  // 卫星轨道经纬度与高度：基于真实 TLE 实时解算大地坐标系参数（经度、纬度、高度）
-  const [orbitPos, setOrbitPos] = useState<{ lng: number; lat: number; height: number }>({
-    lng: 0, lat: 0, height: 0,
-  });
+  // 时间筛选：支持按具体时间点（如 2026/9/2 1:19）直接筛选回看
+  const timeOptions = useMemo(() => {
+    return locations.map((loc, idx) => {
+      const datePart = loc.capturedAt.split(' ')[0].replace(/\//g, '-');
+      const [year, month, day] = datePart.split('-');
+      const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      return {
+        id: `time-${idx + 1}`,
+        label: loc.capturedAt,
+        startDate: formattedDate,
+        endDate: '2026-09-30',
+        day: parseInt(day, 10),
+        totalDays: 30,
+        isPast: idx !== 0,
+      };
+    });
+  }, [locations]);
 
-  useEffect(() => {
-    const targetSat = SATELLITE_DASHBOARD_LIST.find((s) => s.id === satId) ?? SATELLITE_DASHBOARD_LIST[0];
-    const satrec = satellite.twoline2satrec(targetSat.line1, targetSat.line2);
-    const update = () => {
-      const now = new Date();
-      const pv = satellite.propagate(satrec, now);
-      if (pv.position && typeof pv.position !== 'boolean') {
-        const gmst = satellite.gstime(now);
-        const geodetic = satellite.eciToGeodetic(pv.position, gmst);
-        setOrbitPos({
-          lng: satellite.degreesLong(geodetic.longitude),
-          lat: satellite.degreesLat(geodetic.latitude),
-          height: geodetic.height, // 单位 km
-        });
-      }
-    };
-    update();
-    const timer = setInterval(update, 1000);
-    return () => clearInterval(timer);
-  }, [satId]);
-
-  // 回看过往执行周期：默认只有当前周期，另模拟 2 个已完成的历史周期供筛选
-  const cycleOptions = useMemo(() => {
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
-    const list: { id: string; label: string; startDate: string; endDate: string; totalDays: number }[] = [
-      { id: 'current', label: '当前执行周期', startDate, endDate, totalDays },
-    ];
-    const anchor = startDate ? new Date(startDate) : new Date();
-    if (!Number.isNaN(anchor.getTime())) {
-      const cycleLen = totalDays > 0 ? totalDays : 5;
-      for (let i = 1; i <= 2; i++) {
-        const end = new Date(anchor);
-        end.setDate(end.getDate() - cycleLen * i - (i - 1));
-        const start = new Date(end);
-        start.setDate(start.getDate() - cycleLen + 1);
-        list.push({
-          id: `past-${i}`,
-          label: `历史周期（${fmt(start)} ~ ${fmt(end)}）`,
-          startDate: fmt(start),
-          endDate: fmt(end),
-          totalDays: cycleLen,
-        });
-      }
-    }
-    return list;
-  }, [startDate, endDate, totalDays]);
-
-  // 面板默认展示：当前有执行中/同步中的任务时默认看当前周期，否则默认回看最近一个历史周期的进度；没有历史周期则保持当前（空状态）
-  const [selectedCycleId, setSelectedCycleId] = useState(() => (
-    (status === '进行中' || sync) ? 'current' : (cycleOptions[1]?.id ?? 'current')
+  // 面板默认展示：当前有执行中/同步中的任务时默认看当前时间点，否则回看选定时间点
+  const [selectedTimeId, setSelectedTimeId] = useState(() => (
+    (status === '进行中' || sync) ? 'time-1' : (timeOptions[1]?.id ?? 'time-1')
   ));
-  const selectedCycle = cycleOptions.find((c) => c.id === selectedCycleId) ?? cycleOptions[0];
-  const isPastCycle = selectedCycleId !== 'current';
+  const selectedTime = timeOptions.find((t) => t.id === selectedTimeId) ?? timeOptions[0];
+  const isPastTime = selectedTime.isPast;
 
   useEffect(() => {
-    setSelectedDay(null);
-  }, [selectedCycleId]);
+    setSelectedDay(selectedTime.day ?? null);
+  }, [selectedTimeId]);
 
   const isRunning = status === '进行中';
   const currentDay = sync?.day ?? null;
-  const dayCount = isPastCycle ? selectedCycle.totalDays : Math.max(executedDays, currentDay ?? 0);
-  const activeDay = isPastCycle ? (selectedDay ?? selectedCycle.totalDays) : (selectedDay ?? currentDay ?? 1);
+  const dayCount = isPastTime ? selectedTime.totalDays : Math.max(executedDays, currentDay ?? 0);
+  const activeDay = isPastTime ? (selectedDay ?? selectedTime.day ?? selectedTime.totalDays) : (selectedDay ?? currentDay ?? 1);
   const macroStepIndex = !sync ? -1 : sync.receiving ? 0 : sync.cycleFinished ? 4 : sync.planGenerated ? 2 : 1;
   const stepStatus = (idx: number): ProgressStepStatus => (idx < macroStepIndex ? 'done' : idx === macroStepIndex ? 'current' : 'pending');
 
-  const firePointsCount = spatialPoints.filter((p) => p.type === 'fire').length;
+  const firePointsCount = locations.filter((l) => l.status === 'fire').length;
   const buildingPointsCount = spatialPoints.filter((p) => p.type === 'building').length;
-  const activeSpatialCategory: 'fire' | 'building' = showFireSpatial ? 'fire' : 'building';
+  const [fireFilter, setFireFilter] = useState<'fire' | 'safe'>('fire');
 
-  // 地点搜索面板只展示当前分类下地图上实际存在的点位
-  const spatialLocationOptions: Location[] = useMemo(() => spatialPoints
-    .filter((p) => p.type === activeSpatialCategory)
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      country: p.categoryName,
-      lat: p.lat,
-      lng: p.lng,
-      status: p.type === 'fire' ? 'fire' : 'safe',
-      capturedAt: '',
-      photoCount: 0,
-      area: 0,
-      images: [],
-    } as Location)), [spatialPoints, activeSpatialCategory]);
+  // 地点搜索面板点位：支持按林火/古建筑分类以及有火点/无火点状态筛选
+  const spatialLocationOptions: Location[] = useMemo(() => {
+    if (activeCategory === 'building') {
+      return spatialPoints
+        .filter((p) => p.type === 'building')
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          country: p.categoryName,
+          lat: p.lat,
+          lng: p.lng,
+          status: 'safe' as const,
+          capturedAt: '',
+          taskId: p.id,
+          photoCount: 0,
+          area: 0,
+          images: [],
+        }));
+    }
+    return locations.filter((loc) => {
+      if (fireFilter === 'fire') return loc.status === 'fire';
+      if (fireFilter === 'safe') return loc.status === 'safe';
+      return true;
+    });
+  }, [locations, spatialPoints, activeCategory, fireFilter]);
 
-  // 切换空间要素分类：保证林火/古建筑互斥显示
-  const handleSelectSpatialCategory = (category: 'fire' | 'building') => {
+  // 切换顶部综合分类筛选：保证林火/古建筑/卫星数据互斥显示
+  const handleSelectCategory = (category: 'fire' | 'building' | 'satellite') => {
+    setActiveCategory(category);
+    setIsCategoryDropdownOpen(false);
     if (category === 'fire') {
       if (!showFireSpatial) onToggleFireSpatial();
       if (showBuildingSpatial) onToggleBuildingSpatial();
-    } else {
+    } else if (category === 'building') {
       if (!showBuildingSpatial) onToggleBuildingSpatial();
       if (showFireSpatial) onToggleFireSpatial();
     }
-    setIsSpatialCategoryOpen(false);
   };
 
   if (collapsed) {
@@ -1185,7 +1160,7 @@ function MonitorCard({
       <button
         onClick={() => setCollapsed(false)}
         className="w-8 h-8 sm:w-9 sm:h-9 2xl:w-10 2xl:h-10 rounded-xl bg-[#0c101c]/80 border border-white/15 flex items-center justify-center text-cyan-300 shadow-2xl backdrop-blur-2xl hover:border-cyan-400/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] hover:scale-105 transition-all duration-200 cursor-pointer group"
-        title="展开空间要素与卫星数据面板"
+        title="展开面板"
       >
         <Menu className="w-3.5 h-3.5 sm:w-4 sm:h-4 2xl:w-5 2xl:h-5 text-cyan-300 group-hover:text-cyan-200 transition-colors" />
       </button>
@@ -1194,37 +1169,86 @@ function MonitorCard({
 
   return (
     <div className="w-60 sm:w-64 lg:w-72 2xl:w-80 max-h-[calc(100vh-4.5rem)] sm:max-h-[calc(100vh-5.5rem)] 2xl:max-h-[calc(100vh-6rem)] bg-black/60 border border-white/15 rounded-xl sm:rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col text-left select-none animate-fadeIn relative z-30 overflow-hidden">
-      {/* Panel Header: 顶栏汉堡包 Tab 切换与折叠按钮 */}
-      <div className="p-2 px-2.5 2xl:p-2.5 2xl:px-3 border-b border-white/10 bg-white/5 flex items-center justify-between rounded-t-xl sm:rounded-t-2xl shrink-0">
-        <div className="flex items-center gap-0.5 p-0.5 rounded-lg 2xl:rounded-xl bg-black/40 border border-white/10">
+      {/* Panel Header: 最上方直接放置综合分类下拉筛选与折叠按钮 */}
+      <div className="p-2 px-2.5 2xl:p-2.5 2xl:px-3 border-b border-white/10 bg-white/5 flex items-center justify-between gap-2 rounded-t-xl sm:rounded-t-2xl shrink-0 relative z-20">
+        <div className="relative flex-1 min-w-0">
           <button
-            onClick={() => setActiveTab('spatial')}
-            className={`flex items-center gap-1 2xl:gap-1.5 px-1.5 py-0.5 2xl:px-2 2xl:py-1 rounded-md 2xl:rounded-lg text-[11px] 2xl:text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'spatial'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+            onClick={() => setIsCategoryDropdownOpen((v) => !v)}
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 2xl:px-3 2xl:py-2 rounded-xl border text-left transition-all cursor-pointer ${
+              activeCategory === 'fire'
+                ? 'bg-gradient-to-r from-rose-500/18 via-rose-950/20 to-transparent border-rose-500/30'
+                : activeCategory === 'building'
+                ? 'bg-gradient-to-r from-amber-500/18 via-amber-950/20 to-transparent border-amber-500/30'
+                : 'bg-gradient-to-r from-sky-500/18 via-sky-950/20 to-transparent border-sky-500/30'
             }`}
           >
-            <Layers className="w-3 h-3 2xl:w-3.5 2xl:h-3.5" />
-            <span>空间要素</span>
+            <div className="flex items-center gap-2 2xl:gap-2.5 min-w-0">
+              <span
+                className={`w-3.5 h-3.5 2xl:w-4 2xl:h-4 rounded-full border-2 border-white shadow-md flex-shrink-0 ${
+                  activeCategory === 'fire'
+                    ? 'bg-rose-500 shadow-rose-500/50'
+                    : activeCategory === 'building'
+                    ? 'bg-[#8b4513] shadow-amber-700/50'
+                    : 'bg-sky-400 shadow-sky-400/50'
+                }`}
+              />
+              <span className="text-xs 2xl:text-sm font-bold text-white truncate">
+                {activeCategory === 'fire'
+                  ? '全球林火自主巡查'
+                  : activeCategory === 'building'
+                  ? '古建筑'
+                  : '卫星数据'}
+              </span>
+              <span className="text-[10px] 2xl:text-[11px] text-slate-400 font-mono shrink-0">
+                {activeCategory === 'fire'
+                  ? `${firePointsCount} 处`
+                  : activeCategory === 'building'
+                  ? `${buildingPointsCount} 处`
+                  : `${SATELLITE_DASHBOARD_LIST.length} 颗`}
+              </span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-slate-400 shrink-0 transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          <button
-            onClick={() => setActiveTab('satellite')}
-            className={`flex items-center gap-1 2xl:gap-1.5 px-1.5 py-0.5 2xl:px-2 2xl:py-1 rounded-md 2xl:rounded-lg text-[11px] 2xl:text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'satellite'
-                ? 'bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-            }`}
-          >
-            <SatelliteIcon className="w-3 h-3 2xl:w-3.5 2xl:h-3.5" />
-            <span>卫星数据</span>
-          </button>
+          {isCategoryDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-[#0c101c]/95 border border-white/15 rounded-xl shadow-2xl overflow-hidden backdrop-blur-2xl animate-fadeIn divide-y divide-white/[0.06]">
+              <button
+                onClick={() => handleSelectCategory('fire')}
+                className={`w-full flex items-center gap-2 2xl:gap-2.5 px-2.5 py-2 2xl:px-3 2xl:py-2.5 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
+                  activeCategory === 'fire' ? 'bg-rose-500/20 text-rose-300' : 'text-slate-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 rounded-full bg-rose-500 border-2 border-white flex-shrink-0" />
+                <span className="truncate flex-1">全球林火自主巡查</span>
+                <span className="text-[9px] 2xl:text-[10px] text-slate-500 font-mono shrink-0">{firePointsCount} 处</span>
+              </button>
+              <button
+                onClick={() => handleSelectCategory('building')}
+                className={`w-full flex items-center gap-2 2xl:gap-2.5 px-2.5 py-2 2xl:px-3 2xl:py-2.5 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
+                  activeCategory === 'building' ? 'bg-amber-500/20 text-amber-300' : 'text-slate-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 rounded-full bg-[#8b4513] border-2 border-white flex-shrink-0" />
+                <span className="truncate flex-1">古建筑</span>
+                <span className="text-[9px] 2xl:text-[10px] text-slate-500 font-mono shrink-0">{buildingPointsCount} 处</span>
+              </button>
+              <button
+                onClick={() => handleSelectCategory('satellite')}
+                className={`w-full flex items-center gap-2 2xl:gap-2.5 px-2.5 py-2 2xl:px-3 2xl:py-2.5 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
+                  activeCategory === 'satellite' ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 rounded-full bg-sky-400 border-2 border-white flex-shrink-0" />
+                <span className="truncate flex-1">卫星数据</span>
+                <span className="text-[9px] 2xl:text-[10px] text-slate-500 font-mono shrink-0">{SATELLITE_DASHBOARD_LIST.length} 颗</span>
+              </button>
+            </div>
+          )}
         </div>
 
         <button
           onClick={() => setCollapsed(true)}
-          className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           title="折叠面板"
         >
           <ChevronRight className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
@@ -1232,374 +1256,329 @@ function MonitorCard({
       </div>
 
       <div className="overflow-y-auto">
-        {activeTab === 'spatial' ? (
+        {activeCategory === 'satellite' ? (
+          <SatelliteDashboardCard selectedId={satId} onSelectId={onSelectSatelliteId || (() => {})} hideContainer />
+        ) : (
           <div>
-            {/* 模块零：空间要素 —— 全球林火巡查 / 古建筑分类下拉筛选 */}
-            <div className="p-2.5 2xl:p-3.5 border-t border-white/10 first:border-t-0">
-          <div className="relative">
-            <button
-              onClick={() => setIsSpatialCategoryOpen((v) => !v)}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 2xl:px-3 2xl:py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                activeSpatialCategory === 'fire'
-                  ? 'bg-gradient-to-r from-rose-500/18 via-rose-950/20 to-transparent border-rose-500/30'
-                  : 'bg-gradient-to-r from-amber-500/18 via-amber-950/20 to-transparent border-amber-500/30'
-              }`}
-            >
-              <div className="flex items-center gap-2 2xl:gap-2.5">
-                <span
-                  className={`w-3.5 h-3.5 2xl:w-4 2xl:h-4 rounded-full border-2 border-white shadow-md flex-shrink-0 ${
-                    activeSpatialCategory === 'fire' ? 'bg-rose-500 shadow-rose-500/50' : 'bg-[#8b4513] shadow-amber-700/50'
-                  }`}
-                />
-                <span className="text-[11px] 2xl:text-xs font-bold text-white">
-                  {activeSpatialCategory === 'fire' ? '全球林火自主巡查' : '古建筑'}
-                </span>
-                <span className="text-[9px] 2xl:text-[10px] text-slate-400 font-mono">
-                  {activeSpatialCategory === 'fire' ? firePointsCount : buildingPointsCount} 处
-                </span>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-slate-400 transition-transform ${isSpatialCategoryOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isSpatialCategoryOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 z-10 bg-black/90 border border-white/15 rounded-xl shadow-2xl overflow-hidden">
-                <button
-                  onClick={() => handleSelectSpatialCategory('fire')}
-                  className={`w-full flex items-center gap-2 2xl:gap-2.5 px-2.5 py-2 2xl:px-3 2xl:py-2.5 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
-                    activeSpatialCategory === 'fire' ? 'bg-rose-500/20 text-rose-300' : 'text-slate-300 hover:bg-white/10'
-                  }`}
-                >
-                  <span className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 rounded-full bg-rose-500 border-2 border-white flex-shrink-0" />
-                  <span>林火巡查</span>
-                  <span className="ml-auto text-[9px] 2xl:text-[10px] text-slate-500 font-mono">{firePointsCount}</span>
-                </button>
-                <button
-                  onClick={() => handleSelectSpatialCategory('building')}
-                  className={`w-full flex items-center gap-2 2xl:gap-2.5 px-2.5 py-2 2xl:px-3 2xl:py-2.5 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
-                    activeSpatialCategory === 'building' ? 'bg-amber-500/20 text-amber-300' : 'text-slate-300 hover:bg-white/10'
-                  }`}
-                >
-                  <span className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 rounded-full bg-[#8b4513] border-2 border-white flex-shrink-0" />
-                  <span>古建筑</span>
-                  <span className="ml-auto text-[9px] 2xl:text-[10px] text-slate-500 font-mono">{buildingPointsCount}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 模块一：总量 —— 累计监测、已拍摄地区、已拍摄照片 */}
-        <div className="p-2.5 2xl:p-3.5 border-t border-white/10">
-          <div className="grid grid-cols-3 gap-1.5 2xl:gap-2">
-            {[
-              {
-                label: '累计监测',
-                value: executedDays,
-                unit: '天',
-                dot: 'bg-violet-400 shadow-[0_0_6px_#a78bfa]',
-                valColor: 'text-slate-100',
-                bgGradient: 'bg-gradient-to-b from-violet-500/18 via-violet-950/20 to-transparent border-violet-500/30'
-              },
-              {
-                label: '已拍摄地区',
-                value: capturedRegions,
-                unit: '处',
-                dot: 'bg-sky-400 shadow-[0_0_6px_#38bdf8]',
-                valColor: 'text-slate-100',
-                bgGradient: 'bg-gradient-to-b from-sky-500/18 via-sky-950/20 to-transparent border-sky-500/30'
-              },
-              {
-                label: '已拍摄照片',
-                value: totalPhotos,
-                formatter: (n: number) => n.toLocaleString(),
-                unit: '张',
-                dot: 'bg-blue-400 shadow-[0_0_6px_#60a5fa]',
-                valColor: 'text-slate-100',
-                bgGradient: 'bg-gradient-to-b from-blue-500/18 via-blue-950/20 to-transparent border-blue-500/30'
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className={`aspect-square p-1.5 2xl:p-2 rounded-lg 2xl:rounded-xl border flex flex-col items-center justify-center gap-0.5 2xl:gap-1 text-center backdrop-blur-md transition-all ${item.bgGradient}`}
-              >
-                <div className={`text-xs 2xl:text-base font-bold font-mono leading-tight ${item.valColor}`}>
-                  <AnimatedNumber value={item.value} formatter={item.formatter} />
-                </div>
-                <span className="text-[9px] 2xl:text-[10px] text-slate-400 leading-tight">{item.unit}</span>
-                <span className="text-[9px] 2xl:text-[10px] font-medium text-slate-300 leading-tight">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 模块二：筛选区 —— 地点搜索（仅展示地图上实际存在的点位） */}
-        <div className="p-2.5 2xl:p-3.5 border-t border-white/10 space-y-1.5 2xl:space-y-2">
-          <LocationSearch
-            locations={spatialLocationOptions}
-            selectedLocation={selectedSpatialPointId}
-            onSelectLocation={(id) => {
-              if (!id) { onSelectSpatialPoint(null); return; }
-              const point = spatialPoints.find((p) => p.id === id) || null;
-              onSelectSpatialPoint(point);
-            }}
-          />
-        </div>
-
-        {/* 模块三：当前任务 —— 当前执行周期 + 进度同步（默认今日，支持按天筛选）；默认展示，无任务/无历史周期时显示空状态，可折叠 */}
-        <MonitorSection
-          label="当前任务"
-          badge={isRunning && !sync?.cycleFinished ? (
-            <span className="px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold bg-sky-400/20 text-sky-200 border border-sky-400/40">执行中</span>
-          ) : undefined}
-          open={taskOpen}
-          onToggle={() => setTaskOpen((v) => !v)}
-        >
-          {/* 时间周期筛选：默认当前执行周期，可回看历史周期的执行进度 */}
-          <div className="relative">
-            <button
-              onClick={() => setIsCycleOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-1.5 2xl:gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 rounded-xl bg-white/5 border border-white/10 hover:border-sky-400/50 transition-all cursor-pointer text-[11px] 2xl:text-xs"
-            >
-              <span className="flex items-center gap-1.5 2xl:gap-2 min-w-0">
-                <Calendar className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />
-                <span className="truncate font-semibold text-slate-200">{selectedCycle.label}</span>
-              </span>
-              <ChevronDown className={`w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-slate-400 shrink-0 transition-transform ${isCycleOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isCycleOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 z-10 bg-black/90 border border-white/15 rounded-xl shadow-2xl overflow-hidden">
-                {cycleOptions.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setSelectedCycleId(c.id); setIsCycleOpen(false); }}
-                    className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
-                      c.id === selectedCycleId ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-white/10'
-                    }`}
+            {/* 模块一：总量 —— 累计完成、拍摄照片、发现火点 */}
+            <div className="p-2.5 2xl:p-3.5">
+              <div className="grid grid-cols-3 gap-1.5 2xl:gap-2">
+                {[
+                  {
+                    label: '执行任务',
+                    value: completedTasks,
+                    unit: '次',
+                    dot: 'bg-violet-400 shadow-[0_0_6px_#a78bfa]',
+                    valColor: 'text-slate-100',
+                    bgGradient: 'bg-gradient-to-b from-violet-500/18 via-violet-950/20 to-transparent border-violet-500/30'
+                  },
+                  {
+                    label: '拍摄照片',
+                    value: totalPhotos,
+                    formatter: (n: number) => n.toLocaleString(),
+                    unit: '张',
+                    dot: 'bg-sky-400 shadow-[0_0_6px_#38bdf8]',
+                    valColor: 'text-slate-100',
+                    bgGradient: 'bg-gradient-to-b from-sky-500/18 via-sky-950/20 to-transparent border-sky-500/30'
+                  },
+                  {
+                    label: '发现火点',
+                    value: firePoints,
+                    unit: '处',
+                    dot: 'bg-rose-400 shadow-[0_0_6px_#f43f5e]',
+                    valColor: 'text-slate-100',
+                    bgGradient: 'bg-gradient-to-b from-rose-500/18 via-rose-950/20 to-transparent border-rose-500/30'
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className={`aspect-square p-1.5 2xl:p-2 rounded-lg 2xl:rounded-xl border flex flex-col items-center justify-center gap-0.5 2xl:gap-1 text-center backdrop-blur-md transition-all ${item.bgGradient}`}
                   >
-                    <span className="truncate">{c.label}</span>
-                    <span className="text-[9px] 2xl:text-[10px] text-slate-500 font-mono shrink-0">{c.totalDays}天</span>
-                  </button>
+                    <span className="text-[9px] 2xl:text-[10px] font-medium text-slate-300 leading-tight">{item.label}</span>
+                    <div className={`text-xs 2xl:text-base font-bold font-mono leading-tight ${item.valColor}`}>
+                      <AnimatedNumber value={item.value} formatter={item.formatter} />
+                    </div>
+                    <span className="text-[9px] 2xl:text-[10px] text-slate-400 leading-tight">{item.unit}</span>
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {isPastCycle ? (
-            <div className="space-y-1 2xl:space-y-1.5">
-              <div className="text-xs 2xl:text-sm font-bold text-white font-mono">{selectedCycle.startDate} ~ {selectedCycle.endDate}</div>
-              <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
-                <div className="h-full rounded-full shadow-[0_0_6px_#34d399] bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: '100%' }} />
-              </div>
-              <div className="flex items-center justify-end">
-                <span className="text-[11px] 2xl:text-xs font-bold font-mono text-emerald-300">
-                  已完成 {selectedCycle.totalDays}/{selectedCycle.totalDays} 天
-                </span>
-              </div>
             </div>
-          ) : isRunning ? (
-            <div className="space-y-1 2xl:space-y-1.5">
-              <div className="text-xs 2xl:text-sm font-bold text-white font-mono">{startDate} ~ {endDate}</div>
-              <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
+
+            {/* 模块二：筛选区 —— 有火点 / 无火点 状态筛选与地点搜索 */}
+            <div className="p-2.5 2xl:p-3.5 border-t border-white/10 space-y-1.5 2xl:space-y-2">
+              {/* 有火点 / 无火点 胶囊滑动切换 */}
+              <div className="relative p-1 rounded-full bg-black/40 border border-white/10 grid grid-cols-2">
+                {/* 滑动背景指示块 */}
                 <div
-                  className={`h-full rounded-full shadow-[0_0_6px_#38bdf8] transition-all ${
-                    sync?.cycleFinished ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-sky-500 to-sky-400'
+                  className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out ${
+                    fireFilter === 'fire'
+                      ? 'left-1 bg-gradient-to-r from-rose-500/25 to-rose-600/20 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.35)]'
+                      : 'left-[calc(50%+2px)] bg-gradient-to-r from-emerald-500/25 to-emerald-600/20 border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
                   }`}
-                  style={{ width: `${Math.min(100, (activeDay / Math.max(1, totalDays)) * 100)}%` }}
                 />
-              </div>
-              <div className="flex items-center justify-end">
-                <span className={`text-[11px] 2xl:text-xs font-bold font-mono ${sync?.cycleFinished ? 'text-emerald-300' : 'text-sky-300'}`}>
-                  {sync?.cycleFinished ? '已完成' : '已执行'} {activeDay}/{totalDays} 天
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="text-[11px] 2xl:text-xs font-semibold text-slate-300">当前无任务</span>
-            </div>
-          )}
-
-          {(isPastCycle || isRunning) && (
-          <div className="pt-2 mt-1 border-t border-white/10 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">进度同步</span>
-              {(isPastCycle || sync) && (
-              <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setSelectedDay(Math.max(1, activeDay - 1))}
-                  disabled={activeDay <= 1}
-                  className="w-4 h-4 flex items-center justify-center rounded text-sky-300 disabled:text-slate-600 disabled:cursor-not-allowed hover:bg-white/10 cursor-pointer transition-colors"
+                  type="button"
+                  onClick={() => {
+                    setFireFilter('fire');
+                    if (!showFireSpatial) {
+                      onToggleFireSpatial();
+                      if (showBuildingSpatial) onToggleBuildingSpatial();
+                    }
+                  }}
+                  className={`relative z-10 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-full text-[11px] 2xl:text-xs font-bold transition-colors cursor-pointer select-none ${
+                    fireFilter === 'fire'
+                      ? 'text-rose-200'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
                 >
-                  <ChevronLeft className="w-3 h-3" />
+                  <span className={`w-2 h-2 rounded-full transition-all ${
+                    fireFilter === 'fire' ? 'bg-rose-500 shadow-[0_0_6px_#f43f5e]' : 'bg-slate-500'
+                  }`} />
+                  <span>有火点</span>
                 </button>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40 min-w-[44px] text-center">
-                  第<AnimatedNumber value={activeDay} />天
-                </span>
                 <button
-                  onClick={() => setSelectedDay(Math.min(dayCount, activeDay + 1))}
-                  disabled={activeDay >= dayCount}
-                  className="w-4 h-4 flex items-center justify-center rounded text-sky-300 disabled:text-slate-600 disabled:cursor-not-allowed hover:bg-white/10 cursor-pointer transition-colors"
+                  type="button"
+                  onClick={() => {
+                    setFireFilter('safe');
+                  }}
+                  className={`relative z-10 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-full text-[11px] 2xl:text-xs font-bold transition-colors cursor-pointer select-none ${
+                    fireFilter === 'safe'
+                      ? 'text-emerald-200'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
                 >
-                  <ChevronRight className="w-3 h-3" />
+                  <span className={`w-2 h-2 rounded-full transition-all ${
+                    fireFilter === 'safe' ? 'bg-emerald-500 shadow-[0_0_6px_#10b981]' : 'bg-slate-500'
+                  }`} />
+                  <span>无火点</span>
                 </button>
               </div>
-              )}
+
+              <LocationSearch
+                locations={spatialLocationOptions}
+                selectedLocation={selectedSpatialPointId}
+                onSelectLocation={(id) => {
+                  if (!id) { onSelectSpatialPoint(null); return; }
+                  const point = spatialPoints.find((p) => p.id === id);
+                  if (point) {
+                    onSelectSpatialPoint(point);
+                  } else {
+                    const loc = locations.find((l) => l.id === id);
+                    if (loc) {
+                      onSelectSpatialPoint({
+                        id: loc.id,
+                        type: 'fire',
+                        name: loc.name,
+                        categoryName: loc.country,
+                        lng: loc.lng,
+                        lat: loc.lat,
+                        height: 300,
+                        earthObjectId: 'fenghuang',
+                        desc: loc.images[0]?.analysis || `${loc.name}（${loc.country}）遥感巡查点`,
+                        details: {
+                          tag: loc.status === 'fire' ? '🔥 活跃火点' : '🛡️ 巡查安全',
+                          subTag: `任务编号: ${loc.taskId}`,
+                          confidence: loc.status === 'fire' ? '98% 警报' : '100% 正常',
+                          satellite: 'SCS-04-16 LWIR',
+                          metrics: [
+                            { label: '拍摄时间', value: loc.capturedAt },
+                            { label: '任务编号', value: loc.taskId },
+                            { label: '所属区域', value: loc.name },
+                            { label: '国家/地区', value: loc.country },
+                          ],
+                        },
+                      });
+                    }
+                  }
+                }}
+              />
             </div>
 
-            {isPastCycle ? (
-              <div className="space-y-1.5 2xl:space-y-2">
-                {(() => {
-                  const detail = buildPastCycleDayDetail(selectedCycle.startDate, activeDay, locations);
-                  return (
-                    <>
-                      <ProgressStepSection index={0} label="接收拍摄需求" status="done">
-                        <div className="space-y-1 2xl:space-y-1.5">
-                          {detail.locations.map((l) => (
-                            <div key={l.name} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                              <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-                                <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
-                              </span>
-                              <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </ProgressStepSection>
+            {/* 模块三：当前任务 —— 当前执行周期 + 进度同步（默认今日，支持按天筛选）；默认展示，无任务/无历史周期时显示空状态，可折叠 */}
+            <MonitorSection
+              label="任务进度"
+              badge={isRunning && !sync?.cycleFinished ? (
+                <span className="px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold bg-sky-400/20 text-sky-200 border border-sky-400/40">执行中</span>
+              ) : undefined}
+              open={taskOpen}
+              onToggle={() => setTaskOpen((v) => !v)}
+            >
+              {/* 时间筛选：支持按具体时间点（如 2026/9/2 1:19:45）直接筛选 */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsTimeOpen((v) => !v)}
+                  className="w-full flex items-center justify-between gap-1.5 2xl:gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 rounded-xl bg-white/5 border border-white/10 hover:border-sky-400/50 transition-all cursor-pointer text-[11px] 2xl:text-xs"
+                >
+                  <span className="flex items-center gap-1.5 2xl:gap-2 min-w-0">
+                    <Calendar className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />
+                    <span className="truncate font-semibold text-slate-200 font-mono">{selectedTime.label}</span>
+                  </span>
+                  <ChevronDown className={`w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-slate-400 shrink-0 transition-transform ${isTimeOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-                      <ProgressStepSection index={1} label="生成任务规划" status="done">
-                        <div className="space-y-1 2xl:space-y-1.5">
-                          <span className="inline-block px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold border bg-emerald-500/15 text-emerald-400 border-emerald-500/25">已生成</span>
-                          <div className="rounded-lg border border-white/10 overflow-hidden">
-                            {detail.planTable.map((row) => (
-                              <div key={row.time + row.location} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 odd:bg-white/[0.03] even:bg-transparent">
-                                <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{row.time}</span>
-                                <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate text-right">{row.location}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </ProgressStepSection>
-
-                      <ProgressStepSection index={2} label="每天执行步骤同步" status="done">
-                        <div className="space-y-1 2xl:space-y-1.5">
-                          <div className="text-[9px] 2xl:text-[10px] font-bold text-slate-500 uppercase tracking-wide px-0.5">
-                            第{activeDay}天任务已执行完成
-                          </div>
-                          <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">地面模型规划</span>
-                            <span className={progressStageBadgeClass(PROGRESS_GROUND_STEPS.length, PROGRESS_GROUND_STEPS.length)}>
-                              {progressStageLabel(PROGRESS_GROUND_STEPS.length, PROGRESS_GROUND_STEPS.length)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">星上任务执行</span>
-                            <span className={progressStageBadgeClass(PROGRESS_ONBOARD_STEPS.length, PROGRESS_ONBOARD_STEPS.length)}>
-                              {progressStageLabel(PROGRESS_ONBOARD_STEPS.length, PROGRESS_ONBOARD_STEPS.length)}
-                            </span>
-                          </div>
-                        </div>
-                      </ProgressStepSection>
-
-                      <ProgressStepSection index={3} label="本周期任务执行完毕" status="done">
-                        <span className="text-[10px] 2xl:text-[11px] font-medium text-emerald-400">
-                          全部执行天数已完成，任务周期结束。
+                {isTimeOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-[#0c101c]/95 border border-white/15 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto backdrop-blur-2xl">
+                    {timeOptions.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => { setSelectedTimeId(t.id); setIsTimeOpen(false); }}
+                        className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 text-left text-[11px] 2xl:text-xs font-semibold font-mono transition-colors cursor-pointer ${
+                          t.id === selectedTimeId ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="truncate">{t.label}</span>
+                        <span className="text-[9px] 2xl:text-[10px] text-slate-500 shrink-0">
+                          {!t.isPast ? '当前' : `第${t.day}天`}
                         </span>
-                      </ProgressStepSection>
-                    </>
-                  );
-                })()}
-              </div>
-            ) : !sync ? (
-              <div className="p-2.5 2xl:p-3 rounded-xl border border-dashed border-white/15 flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0 animate-pulse" />
-                <span className="text-[11px] 2xl:text-xs font-semibold text-slate-400">正在接收拍摄需求…</span>
-              </div>
-            ) : (
-            <div className="space-y-1.5 2xl:space-y-2">
-                {activeDay === sync.day ? (
-                  <div className="space-y-1.5 2xl:space-y-2">
-                    <ProgressStepSection key={`step0-${stepStatus(0)}`} index={0} label="接收拍摄需求" status={stepStatus(0)}>
-                      <div className={`space-y-1 2xl:space-y-1.5 ${stepStatus(0) === 'current' ? 'animate-pulse' : ''}`}>
-                        {sync.locations.map((l) => (
-                          <div key={l.name} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
-                              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-                              <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
-                            </span>
-                            <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </ProgressStepSection>
-
-                    <ProgressStepSection key={`step1-${stepStatus(1)}`} index={1} label="生成任务规划" status={stepStatus(1)}>
-                      <div className="space-y-1 2xl:space-y-1.5">
-                        <span className={`inline-block px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold border ${
-                          sync.planGenerated
-                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
-                            : 'bg-white/5 text-slate-400 border-white/10'
-                        }`}>
-                          {sync.planGenerated ? '已生成' : '规划中…'}
-                        </span>
-                        {sync.planGenerated && sync.planTable && (
-                          <div className="rounded-lg border border-white/10 overflow-hidden">
-                            {sync.planTable.map((row) => (
-                              <div key={row.time + row.location} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 odd:bg-white/[0.03] even:bg-transparent">
-                                <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{row.time}</span>
-                                <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate text-right">{row.location}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </ProgressStepSection>
-
-                    <ProgressStepSection key={`step2-${stepStatus(2)}`} index={2} label="每天执行步骤同步" status={stepStatus(2)}>
-                      <div className="space-y-1 2xl:space-y-1.5">
-                        <div className="text-[9px] 2xl:text-[10px] font-bold text-slate-500 uppercase tracking-wide px-0.5">
-                          正在执行【第{sync.day}天】任务
-                        </div>
-                        <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">地面模型规划</span>
-                          <span className={progressStageBadgeClass(sync.groundStepIndex, PROGRESS_GROUND_STEPS.length)}>
-                            {progressStageLabel(sync.groundStepIndex, PROGRESS_GROUND_STEPS.length)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">星上任务执行</span>
-                          <span className={progressStageBadgeClass(sync.onboardStepIndex, PROGRESS_ONBOARD_STEPS.length)}>
-                            {progressStageLabel(sync.onboardStepIndex, PROGRESS_ONBOARD_STEPS.length)}
-                          </span>
-                        </div>
-                      </div>
-                    </ProgressStepSection>
-
-                    <ProgressStepSection key={`step3-${stepStatus(3)}`} index={3} label="本周期任务执行完毕" status={stepStatus(3)}>
-                      <span className="text-[10px] 2xl:text-[11px] font-medium text-emerald-400">
-                        全部执行天数已完成，任务周期结束。
-                      </span>
-                    </ProgressStepSection>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="text-[10px] 2xl:text-[11px] font-semibold text-emerald-400">第{activeDay}天任务已执行完成</span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-            )}
+
+              {(isPastTime || isRunning) ? (
+                <div className="space-y-1.5 2xl:space-y-2">
+                  {isPastTime ? (
+                  <div className="space-y-1.5 2xl:space-y-2">
+                    {(() => {
+                      const detail = buildPastCycleDayDetail(selectedTime.startDate, activeDay, locations);
+                      return (
+                        <>
+                          <ProgressStepSection index={0} label="筛选拍摄地点" status="done">
+                            <div className="space-y-1 2xl:space-y-1.5">
+                              {detail.locations.map((l) => (
+                                <div key={l.name} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                  <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+                                    <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
+                                  </span>
+                                  <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </ProgressStepSection>
+
+                          <ProgressStepSection index={1} label="生成任务规划" status="done">
+                            <div className="space-y-1 2xl:space-y-1.5">
+                              <div className="rounded-lg border border-white/10 overflow-hidden divide-y divide-white/[0.06]">
+                                {detail.planTable.map((row) => (
+                                  <div key={row.time + row.location} className="p-1.5 2xl:p-2 bg-white/[0.02] hover:bg-white/[0.05] transition-colors space-y-1">
+                                    <div className="flex items-center justify-between gap-1.5">
+                                      <span className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 truncate">{row.location}</span>
+                                      {row.taskId && (
+                                        <span className="text-[9px] 2xl:text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0 font-medium">
+                                          {row.taskId}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[9px] 2xl:text-[10px] text-slate-400 font-mono">
+                                      <Clock className="w-2.5 h-2.5 text-sky-400 shrink-0" />
+                                      <span>拍摄时间：{row.time}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </ProgressStepSection>
+
+                          <ProgressStepSection index={2} label="卫星自主执行" status="done">
+                            <div className="space-y-1 2xl:space-y-1.5">
+                              <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">星上任务执行</span>
+                                <span className={progressStageBadgeClass(PROGRESS_ONBOARD_STEPS.length, PROGRESS_ONBOARD_STEPS.length)}>
+                                  {progressStageLabel(PROGRESS_ONBOARD_STEPS.length, PROGRESS_ONBOARD_STEPS.length)}
+                                </span>
+                              </div>
+                            </div>
+                          </ProgressStepSection>
+
+                          <ProgressStepSection index={3} label="任务完成" status="done" />
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : !sync ? (
+                  <div className="p-2.5 2xl:p-3 rounded-xl border border-dashed border-white/15 flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0 animate-pulse" />
+                    <span className="text-[11px] 2xl:text-xs font-semibold text-slate-400">正在接收拍摄需求…</span>
+                  </div>
+                ) : (
+                <div className="space-y-1.5 2xl:space-y-2">
+                    {activeDay === sync.day ? (
+                      <div className="space-y-1.5 2xl:space-y-2">
+                        <ProgressStepSection key={`step0-${stepStatus(0)}`} index={0} label="接收拍摄需求" status={stepStatus(0)}>
+                          <div className={`space-y-1 2xl:space-y-1.5 ${stepStatus(0) === 'current' ? 'animate-pulse' : ''}`}>
+                            {sync.locations.map((l) => (
+                              <div key={l.name} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+                                  <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
+                                </span>
+                                <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </ProgressStepSection>
+
+                        <ProgressStepSection key={`step1-${stepStatus(1)}`} index={1} label="生成任务规划" status={stepStatus(1)}>
+                          <div className="space-y-1 2xl:space-y-1.5">
+                            {!sync.planGenerated && (
+                              <span className="inline-block px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold border bg-white/5 text-slate-400 border-white/10">
+                                规划中…
+                              </span>
+                            )}
+                            {sync.planGenerated && sync.planTable && (
+                              <div className="rounded-lg border border-white/10 overflow-hidden divide-y divide-white/[0.06]">
+                                {sync.planTable.map((row) => (
+                                  <div key={row.time + row.location} className="p-1.5 2xl:p-2 bg-white/[0.02] hover:bg-white/[0.05] transition-colors space-y-1">
+                                    <div className="flex items-center justify-between gap-1.5">
+                                      <span className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 truncate">{row.location}</span>
+                                      {row.taskId && (
+                                        <span className="text-[9px] 2xl:text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0 font-medium">
+                                          {row.taskId}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[9px] 2xl:text-[10px] text-slate-400 font-mono">
+                                      <Clock className="w-2.5 h-2.5 text-sky-400 shrink-0" />
+                                      <span>拍摄时间：{row.time}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </ProgressStepSection>
+
+                        <ProgressStepSection key={`step2-${stepStatus(2)}`} index={2} label="每天执行步骤同步" status={stepStatus(2)}>
+                          <div className="space-y-1 2xl:space-y-1.5">
+                            <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                              <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">星上任务执行</span>
+                              <span className={progressStageBadgeClass(sync.onboardStepIndex, PROGRESS_ONBOARD_STEPS.length)}>
+                                {progressStageLabel(sync.onboardStepIndex, PROGRESS_ONBOARD_STEPS.length)}
+                              </span>
+                            </div>
+                          </div>
+                        </ProgressStepSection>
+
+                        <ProgressStepSection key={`step3-${stepStatus(3)}`} index={3} label="任务完成" status={stepStatus(3)} />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="text-[10px] 2xl:text-[11px] font-semibold text-emerald-400">第{activeDay}天任务已执行完成</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              ) : null}
+            </MonitorSection>
           </div>
-          )}
-        </MonitorSection>
+        )}
       </div>
-    ) : (
-      <SatelliteDashboardCard selectedId={satId} onSelectId={onSelectSatelliteId || (() => {})} hideContainer />
-    )}
-  </div>
-</div>
-);
+    </div>
+  );
 }
 
 // ── 卫星数据看板：与星座全量数据 SATELLITE_CONSTELLATION_ITEMS 同步 ──
@@ -1929,7 +1908,7 @@ interface ProgressSyncState {
   day: number;
   locations: { name: string; lng: number; lat: number }[];
   planGenerated: boolean;
-  planTable?: { time: string; location: string }[];
+  planTable?: { time: string; location: string; taskId?: string }[];
   groundStepIndex: number; // -1 = 未开始
   onboardStepIndex: number; // -1 = 未开始
   fireDetected?: boolean;
@@ -1956,66 +1935,108 @@ function progressStageBadgeClass(stepIndex: number, total: number): string {
 // 为历史周期的某一天生成一份确定性（基于日期+天数）的已完成任务详情，用于回看过往执行进度
 function buildPastCycleDayDetail(cycleStartDate: string, day: number, pool: Location[]) {
   if (pool.length === 0) {
-    return { locations: [] as { name: string; lng: number; lat: number }[], planTable: [] as { time: string; location: string }[] };
+    return { locations: [] as { name: string; lng: number; lat: number }[], planTable: [] as { time: string; location: string; taskId?: string }[] };
   }
-  const seed = (cycleStartDate.split('-').reduce((acc, n) => acc + Number(n), 0) + day) % pool.length;
-  const picked = [pool[seed], pool[(seed + 1) % pool.length]].filter((l, i, arr) => arr.findIndex((x) => x.id === l.id) === i);
+  const matchingLoc = pool.find((l) => {
+    const d = l.capturedAt.split(' ')[0].replace(/\//g, '-');
+    const [y, m, dayStr] = d.split('-');
+    const formatted = `${y}-${m.padStart(2, '0')}-${dayStr.padStart(2, '0')}`;
+    return formatted === cycleStartDate;
+  });
+  const picked = matchingLoc ? [matchingLoc] : [pool[day % pool.length]];
   const dayLocations = picked.map((l) => ({ name: l.name, lng: l.lng, lat: l.lat }));
-  const planTable = dayLocations.map((l, i) => ({ time: `0${8 + i * 2}:00`, location: l.name }));
+  const planTable = picked.map((l) => ({
+    time: l.capturedAt.split(' ')[1] || '08:00',
+    location: l.name,
+    taskId: l.taskId,
+  }));
   return { locations: dayLocations, planTable };
 }
 
-// 进度同步四大流程中的单个步骤：可折叠，进行中默认展开，完成后自动收起（点击可再次查看详情）
+// 进度同步四大流程中的单个步骤：垂直流程图节点样式，可折叠，进行中默认展开，完成后自动收起（点击可再次查看详情）
 function ProgressStepSection({
   index,
+  totalSteps = 4,
   label,
   status,
   children,
 }: {
   index: number;
+  totalSteps?: number;
   label: string;
   status: ProgressStepStatus;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
-  const [expanded, setExpanded] = useState(status === 'current' || (status === 'done' && index === 3));
+  const [expanded, setExpanded] = useState(status === 'current' || (status === 'done' && index === 1));
+  const isLast = index === totalSteps - 1;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
-      <div
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-2 px-2.5 py-2 cursor-pointer select-none hover:opacity-90"
-      >
+    <div className="relative flex items-start gap-2.5 group">
+      {/* 垂直流程图连接线与指示圆点 */}
+      <div className="flex flex-col items-center self-stretch shrink-0 pt-0.5">
         {status === 'done' ? (
-          <div className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center shrink-0">
+          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(56,189,248,0.5)] ring-2 ring-sky-400/20 z-10">
             <Check className="w-3 h-3 text-white stroke-[3]" />
           </div>
         ) : status === 'current' ? (
-          <div className="w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center shrink-0 ring-2 ring-sky-400/30">
+          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shrink-0 ring-4 ring-sky-400/30 shadow-[0_0_12px_rgba(56,189,248,0.7)] z-10">
             <RotateCw className="w-3 h-3 text-white stroke-[2.5] animate-spin" />
           </div>
         ) : (
-          <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-slate-400 font-bold text-[10px] font-mono shrink-0">
+          <div className="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-slate-400 font-mono text-[10px] font-bold shrink-0 z-10">
             {index + 1}
           </div>
         )}
-        <span className={`text-[11px] font-bold flex-1 ${status === 'pending' ? 'text-slate-500' : 'text-slate-200'}`}>
-          第{PROGRESS_STEP_ORDINALS[index]}步 · {label}
-        </span>
-        {status !== 'pending' && (
-          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+
+        {/* 垂直连线 */}
+        {!isLast && (
+          <div
+            className={`w-[2px] flex-1 min-h-[16px] my-1 rounded-full transition-all duration-300 ${
+              status === 'done'
+                ? 'bg-gradient-to-b from-sky-400/80 via-sky-500/50 to-white/15'
+                : 'bg-white/10'
+            }`}
+          />
         )}
       </div>
-      {expanded && status !== 'pending' && (
-        <div className="px-2.5 pb-2.5 pt-0.5 animate-fadeIn">
-          {children}
+
+      {/* 节点内容卡片 */}
+      <div className={`flex-1 rounded-xl border transition-all duration-200 overflow-hidden mb-2 ${
+        status === 'current'
+          ? 'bg-sky-500/10 border-sky-400/40 shadow-[0_0_12px_rgba(56,189,248,0.15)]'
+          : status === 'done'
+            ? 'bg-white/[0.03] border-white/10 hover:border-white/20'
+            : 'bg-white/[0.01] border-white/5 opacity-60'
+      }`}>
+        <div
+          onClick={() => {
+            if (children) setExpanded((v) => !v);
+          }}
+          className={`flex items-center justify-between gap-2 px-2.5 py-2 select-none ${
+            children ? 'cursor-pointer hover:bg-white/[0.03]' : ''
+          }`}
+        >
+          <span className={`text-[11px] 2xl:text-xs font-bold truncate ${
+            status === 'pending' ? 'text-slate-500' : status === 'current' ? 'text-sky-300' : 'text-slate-200'
+          }`}>
+            {label}
+          </span>
+          {children && (
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+          )}
         </div>
-      )}
+        {expanded && children && (
+          <div className="px-2.5 pb-2.5 pt-0.5 border-t border-white/5 animate-fadeIn">
+            {children}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 // 拍摄时间/拍摄地点任务规划表（与任务规划对话区卡片风格保持一致）
-export function ScheduleTable({ rows }: { rows: { time: string; location: string }[] }) {
+export function ScheduleTable({ rows }: { rows: { time: string; location: string; taskId?: string }[] }) {
   return (
     <div className="w-full rounded-2xl bg-white/95 dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/[0.08] shadow-sm backdrop-blur-xl my-2.5 overflow-hidden">
       <div className="px-3.5 sm:px-4 pt-3.5 pb-2 flex items-center gap-2">
@@ -2027,15 +2048,19 @@ export function ScheduleTable({ rows }: { rows: { time: string; location: string
       <table className="w-full text-[11px] sm:text-xs border-t border-slate-100 dark:border-white/[0.06]">
         <thead className="bg-slate-50/80 dark:bg-white/[0.03] text-slate-500 dark:text-slate-400">
           <tr>
+            <th className="text-left font-semibold px-3.5 sm:px-4 py-2">地点</th>
             <th className="text-left font-semibold px-3.5 sm:px-4 py-2">拍摄时间</th>
-            <th className="text-left font-semibold px-3.5 sm:px-4 py-2">拍摄地点</th>
+            <th className="text-left font-semibold px-3.5 sm:px-4 py-2">任务ID</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
-          {rows.map((r) => (
+          {rows.map((r, idx) => (
             <tr key={r.time + r.location} className="text-slate-700 dark:text-slate-300">
-              <td className="px-3.5 sm:px-4 py-2 font-mono">{r.time}</td>
-              <td className="px-3.5 sm:px-4 py-2">{r.location}</td>
+              <td className="px-3.5 sm:px-4 py-2 font-medium">{r.location}</td>
+              <td className="px-3.5 sm:px-4 py-2 font-mono text-sky-400">{r.time}</td>
+              <td className="px-3.5 sm:px-4 py-2 font-mono text-slate-400">
+                {r.taskId || `TASK-PL-20260901-0${idx + 1}`}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -2104,6 +2129,7 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
   const [dashboardMessages, setDashboardMessages] = useState<DashboardChatMessage[]>([]);
   // 看板顶部统计数字，随任务进度同步联动增长（数字变化时通过 AnimatedNumber 滚动过渡）
   const [dashboardStats, setDashboardStats] = useState({
+    completedTasks: stats.completedTasks ?? 15,
     capturedRegions: stats.capturedRegions,
     totalPhotos: stats.totalPhotos,
     firePoints: stats.firePoints,
@@ -2313,13 +2339,21 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
       return;
     }
 
-    // 开始任务的触发入口
-    if (trimmed.includes('开启') && (trimmed.includes('监测') || trimmed.includes('任务'))) {
+    // 开始/安排任务的触发入口
+    if ((trimmed.includes('开启') || trimmed.includes('安排') || trimmed.includes('执行') || trimmed.includes('观测') || trimmed.includes('火灾')) && (trimmed.includes('监测') || trimmed.includes('任务') || trimmed.includes('宁波') || trimmed.includes('火灾') || trimmed.includes('观测') || trimmed.includes('港口'))) {
       if (selectedApp?.status === '进行中') {
-        reply(`当前任务正在进行，时间从 ${selectedApp.startDate} 到 ${selectedApp.endDate}。`);
+        reply(`当前「${selectedApp.title}」任务正在执行中，已自动同步最新任务进展。`);
+        runProgressSyncFlow((selectedApp.executedDays ?? 0) + 1);
       } else {
-        setChatFlow({ type: 'awaiting_dates' });
-        reply('好的，请提供本次监测任务的开始日期和结束日期（例如：2026-09-05 至 2026-09-11）。', { dateOptions: buildDateOptions() });
+        const dates = extractDates(trimmed);
+        if (dates.length >= 2) {
+          const [startDate, endDate] = dates;
+          setChatFlow({ type: 'awaiting_start_confirm', startDate, endDate });
+          reply(`好的，任务周期为 ${startDate} ~ ${endDate}，确认发起「${selectedApp?.title ?? '林火监测'}」任务吗？`, { confirmChoice: true });
+        } else {
+          setChatFlow({ type: 'awaiting_dates' });
+          reply('好的，已识别到观测与火灾检测任务需求。请提供本次监测任务的开始日期和结束日期（例如：2026-09-05 至 2026-09-11）：', { dateOptions: buildDateOptions() });
+        }
       }
       return;
     }
@@ -2390,10 +2424,10 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
     };
 
     const customLocations = [
-      { name: '江西省上饶市婺源县', lng: 118.1104, lat: 29.3168, locationType: '山地林区', fireDetected: true, area: 12.8, image: locations.find(l => l.status === 'fire')?.images?.[0]?.url || fireLwirPreviewImg },
-      { name: '越南', lng: 107.3092, lat: 21.324, locationType: '热带雨林', fireDetected: false, area: 0, image: locations.find(l => l.status === 'safe')?.images?.[0]?.url },
-      { name: '朝鲜', lng: 128.9606, lat: 41.9096, locationType: '针叶林带', fireDetected: false, area: 0, image: locations.find(l => l.status === 'safe')?.images?.[0]?.url },
-      { name: '俄罗斯', lng: 122.8761, lat: 53.6871, locationType: '针叶林带', fireDetected: true, area: 34.5, image: locations.find(l => l.status === 'fire')?.images?.[0]?.url || fireLwirPreviewImg },
+      { name: '俄勒冈/爱达荷边界', lng: -117.15, lat: 44.52, locationType: '山地针叶林', fireDetected: true, area: 3840, image: locations.find(l => l.status === 'fire')?.images?.[0]?.url || fireLwirPreviewImg },
+      { name: '南下加利福尼亚州', lng: -111.67, lat: 26.05, locationType: '干旱灌木林', fireDetected: false, area: 0, image: locations.find(l => l.status === 'safe')?.images?.[0]?.url },
+      { name: '朝鲜', lng: 127.50, lat: 40.00, locationType: '针阔混交林', fireDetected: false, area: 0, image: locations.find(l => l.status === 'safe')?.images?.[0]?.url },
+      { name: '俄罗斯', lng: 120.00, lat: 56.50, locationType: '远东针叶林', fireDetected: false, area: 0, image: locations.find(l => l.status === 'safe')?.images?.[0]?.url },
     ];
 
     const locationPills = customLocations.map((l) => `${l.name}（${l.lng}，${l.lat}）`);
@@ -2430,6 +2464,7 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
     const table = customLocations.map((l, i) => ({
       time: `${shotDateStr} ${String(9 + i * 2).padStart(2, '0')}:${i % 2 === 0 ? '15' : '40'}`,
       location: l.name,
+      taskId: `TASK-${shotDateStr.replace(/-/g, '')}-0${i + 1}`,
     }));
     pushMsg(planningMsgId, { content: '已生成任务规划，详情如下：', table }, t += 1100);
     setTimeout(() => setProgressSync(prev => (prev ? { ...prev, planGenerated: true, planTable: table } : prev)), t);
@@ -2439,6 +2474,11 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
     pushMsg(stageMsgId, { content: `正在进行第${day}天任务规划，同步“阶段步骤”：`, stages, stagesTitle: `第${day}天任务规划`, currentStepIndex: 0 }, t += 1000);
     setTimeout(() => runStepsProgressively(stageMsgId, stages.length, 550), t);
     setTimeout(() => runPanelProgress('groundStepIndex', PROGRESS_GROUND_STEPS.length, 550), t);
+
+    // 在“任务包组装与发送”环节发送任务单与指令单
+    const taskOrderMsgId = uid('task-order');
+    const taskOrderContent = `已生成任务和指令单。\n\n任务单：\n{ "validity_period": [ "2026-09-22 07:15:49", "2026-09-25 07:15:49" ], "location_diameter": 3, "observation_mode": "single", "resolution": "default", "sensor_type": "optical", "location_type": "point", "admin_region": [ "俄罗斯", "萨哈共和国 (Sakha Rep.)" ], "task_priority": 5, "time_priority": 5, "task_mode": "imaging_compute", "intent_type": "control", "quality_priority": 3, "location": "俄罗斯萨哈共和国 (Sakha Rep.)" }\n{ "task_mode": "imaging_compute", "intent_type": "control", "action": "run_algorithm", "_source": "CAPABILITY_BYPASS", "algorithm_id": "fire_detection" }\n\n指令单：\n00FEABCD010201002C0001010004030300000102A5CC6807EC6D580000000001F40CA67BCF0CA7DA5A00015F05000201006AB1F2B802003101869F031A00AA40D9A612D0340A74378AD4DB000038EB377103E70EE2DB2937930041060C0A432AF05859DE45AB00037E528800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000035`;
+    pushMsg(taskOrderMsgId, { content: taskOrderContent }, t + 2 * 550);
 
     pushMsg(downlinkMsgId, { content: '等待星上结果下传………' }, t += stages.length * 550 + 700);
 
@@ -2478,8 +2518,9 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
       // 当天任务执行完毕：联动地图，在对应经纬度处短暂闪烁红点提示
       setPulseMarkers(customLocations.map((l) => ({ lat: l.lat, lng: l.lng })));
       setTimeout(() => setPulseMarkers([]), 2600);
-      // 当天任务执行完毕：累计监测天数、地区、照片、发现火点同步滚动 +1（AnimatedNumber 负责滚动过渡）
+      // 当天任务执行完毕：累计完成任务、地区、照片、发现火点同步滚动 +1（AnimatedNumber 负责滚动过渡）
       setDashboardStats(prev => ({
+        completedTasks: prev.completedTasks + 1,
         capturedRegions: prev.capturedRegions + 1,
         totalPhotos: prev.totalPhotos + 1,
         firePoints: prev.firePoints + 1,
@@ -2574,13 +2615,13 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
   const [pointScreenPos, setPointScreenPos] = useState<{ x: number; y: number } | null>(null);
   // 卫星数据看板当前展示的卫星：地球（2D/3D）上点击卫星图标或看板下拉筛选均可切换
   const [selectedSatelliteCode, setSelectedSatelliteCode] = useState<string>('scs-04-16');
-  // 右上角监控卡当前激活的子 Tab（'spatial' 空间要素 | 'satellite' 卫星数据）
-  const [monitorActiveTab, setMonitorActiveTab] = useState<'spatial' | 'satellite'>('spatial');
+  // 右上角监控卡当前激活的分类（'fire' 全球林火自主巡查 | 'building' 古建筑 | 'satellite' 卫星数据）
+  const [monitorActiveCategory, setMonitorActiveCategory] = useState<'fire' | 'building' | 'satellite'>('fire');
 
   // 处理点击卫星时的统一联动逻辑：设置当前卫星并自动切换到「卫星数据」看板
   const handleSelectSatellite = useCallback((satId: string) => {
     setSelectedSatelliteCode(satId);
-    setMonitorActiveTab('satellite');
+    setMonitorActiveCategory('satellite');
   }, []);
 
   // 2D 昼夜光照切换（改变地图样式滤镜）
@@ -2596,6 +2637,38 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
     }, 1000);
     return () => clearInterval(timer);
   }, [viewDimension]);
+
+  // 气象环境预报看板（底部中心浮层）
+  const [showWeatherForecast, setShowWeatherForecast] = useState<boolean>(false);
+  const [currentWeatherAirport, setCurrentWeatherAirport] = useState<AirportWeatherItem>(AIRPORT_WEATHER_LIST[0]);
+
+  // 选择气象机场并触发地球/2D地图联动飞行
+  const handleSelectWeatherAirport = useCallback((airport: AirportWeatherItem) => {
+    setCurrentWeatherAirport(airport);
+    // 构造临时标绘点使 3D Cesium 和 2D Leaflet 共同响应飞往指定机场
+    const airportSpatialPoint: SpatialMarkerPoint = {
+      id: airport.id,
+      type: 'building',
+      name: airport.name,
+      categoryName: '气象枢纽',
+      lng: airport.lng,
+      lat: airport.lat,
+      height: 18000,
+      desc: `${airport.name} (${airport.code}) - 标高 ${airport.elevation}m`,
+      earthObjectId: airport.id,
+      details: {
+        tag: '气象观测',
+        subTag: '机场气象站',
+        metrics: [
+          { label: '经纬度', value: `${airport.lng.toFixed(2)}°E, ${airport.lat.toFixed(2)}°N` },
+          { label: '海拔', value: `${airport.elevation}m` },
+          { label: '基准气温', value: `${airport.baseTemp}℃` },
+        ],
+      },
+    };
+    setSelectedSpatialPoint(airportSpatialPoint);
+    setTargetFlyPoint(airportSpatialPoint);
+  }, []);
 
   // 3D 地球镜头飞抵拉近
   const handleFenghuangArrive = useCallback(() => {
@@ -2716,7 +2789,7 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                   {dashboardMessages.map(msg => (
                     <div key={msg.id} className={`flex items-start w-full ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
                       <div className={`rounded-2xl p-3.5 sm:p-4 transition-all text-left ${msg.role === 'assistant' ? 'w-full bg-white/90 dark:bg-[#121829]/90 border border-slate-200/90 dark:border-white/[0.08] text-slate-800 dark:text-slate-200 shadow-sm' : 'max-w-[85%] bg-blue-600 text-white shadow-md shadow-blue-900/20'}`}>
-                        <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+                        <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-all">{msg.content}</div>
                         {msg.confirmChoice &&
                           msg.id === dashboardMessages[dashboardMessages.length - 1]?.id &&
                           (chatFlow.type === 'awaiting_start_confirm' || chatFlow.type === 'awaiting_interrupt_confirm') && (
@@ -2869,11 +2942,49 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
           </div>
         )}
 
-        {/* 2. 右上角整合汉堡包导航抽屉：整合空间要素筛选、监控分析与卫星数据看板 */}
-        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20">
+        {/* 1.6 看板左上角总体数据卡（两张独立卡片：去掉图标、字号更大、系统统一字体、玻璃质感与科技感） */}
+        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex items-center gap-2 sm:gap-3 pointer-events-auto">
+          {/* 卡片 1：在轨卫星 */}
+          <div className="relative group overflow-hidden rounded-xl sm:rounded-2xl p-[1px] transition-all duration-300 hover:scale-[1.03] shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_16px_rgba(56,189,248,0.15)]">
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/40 via-cyan-500/20 to-blue-600/30 rounded-xl sm:rounded-2xl group-hover:from-sky-400/60 group-hover:via-cyan-400/35 group-hover:to-blue-500/50 transition-colors" />
+            <div className="relative min-w-[124px] sm:min-w-[140px] px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-[11px] sm:rounded-[15px] bg-slate-950/35 backdrop-blur-md border border-white/10 text-left select-none">
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
+              <div className="text-xs sm:text-sm font-semibold text-slate-200/90 leading-none mb-1.5">
+                在轨卫星
+              </div>
+              <div className="flex items-baseline gap-1 leading-none">
+                <span className="font-bold text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-sky-100 via-cyan-100 to-white drop-shadow-[0_0_12px_rgba(56,189,248,0.5)]">
+                  16
+                </span>
+                <span className="text-xs sm:text-sm text-sky-200/90 font-medium">颗</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 卡片 2：整体算力 */}
+          <div className="relative group overflow-hidden rounded-xl sm:rounded-2xl p-[1px] transition-all duration-300 hover:scale-[1.03] shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_16px_rgba(45,212,191,0.15)]">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/40 via-teal-500/20 to-blue-600/30 rounded-xl sm:rounded-2xl group-hover:from-cyan-400/60 group-hover:via-teal-400/35 group-hover:to-blue-500/50 transition-colors" />
+            <div className="relative min-w-[130px] sm:min-w-[148px] px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-[11px] sm:rounded-[15px] bg-slate-950/35 backdrop-blur-md border border-white/10 text-left select-none">
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent" />
+              <div className="text-xs sm:text-sm font-semibold text-slate-200/90 leading-none mb-1.5">
+                整体算力
+              </div>
+              <div className="flex items-baseline gap-1 leading-none">
+                <span className="font-bold text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 via-teal-100 to-white drop-shadow-[0_0_12px_rgba(45,212,191,0.5)]">
+                  5.8
+                </span>
+                <span className="text-xs sm:text-sm text-cyan-200/90 font-medium tracking-tight">POPS</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. 右上角整合汉堡包导航抽屉 */}
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center gap-2 sm:gap-3 pointer-events-auto">
           <MonitorCard
             title={selectedApp.title}
             status={selectedApp.status}
+            completedTasks={dashboardStats.completedTasks}
             capturedRegions={dashboardStats.capturedRegions}
             totalPhotos={dashboardStats.totalPhotos}
             firePoints={dashboardStats.firePoints}
@@ -2895,8 +3006,8 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
             }}
             selectedSatelliteId={selectedSatelliteCode}
             onSelectSatelliteId={handleSelectSatellite}
-            monitorActiveTab={monitorActiveTab}
-            onMonitorTabChange={setMonitorActiveTab}
+            monitorActiveCategory={monitorActiveCategory}
+            onMonitorCategoryChange={setMonitorActiveCategory}
           />
         </div>
 
@@ -2922,6 +3033,14 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
               onToggleDimension={() => setViewDimension('2d')}
               selectedSatelliteId={selectedSatelliteCode}
               onSelectSatellite={handleSelectSatellite}
+              showWeatherForecast={showWeatherForecast}
+              onToggleWeatherForecast={() => {
+                const next = !showWeatherForecast;
+                setShowWeatherForecast(next);
+                if (next) {
+                  handleSelectWeatherAirport(currentWeatherAirport);
+                }
+              }}
             />
 
             {/* 地球放大后从小圆点延伸出的空间遥感数据处理级别思维导图 */}
@@ -2961,8 +3080,8 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
         {/* ── 2D 平面遥感监测视图（与 3D 视图保持要素与控制条一致）──────────────────── */}
         {viewDimension === '2d' && (
           <div className="w-full h-full relative z-0">
-            {/* 快捷交互操作条 (2D 控制：3D/2D切换 / 全景视角 / 昼夜光照 / 正北重置，左上角垂直纵排，与 3D 视图保持完全一致) */}
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto">
+            {/* 快捷交互操作条 (2D 控制：3D/2D切换 / 全景视角 / 昼夜光照 / 正北重置，左下角垂直纵排，与 3D 视图保持完全一致) */}
+            <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto">
               {/* 3D / 2D 视图切换按钮 */}
               <button
                 id="btn-toggle-dimension-2d"
@@ -3002,6 +3121,26 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                   <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300 group-hover:drop-shadow-[0_0_8px_rgba(165,180,252,0.6)]" />
                 )}
               </button>
+
+              {/* 气象环境预报看板切换按钮 */}
+              <button
+                id="btn-toggle-weather-forecast"
+                onClick={() => {
+                  const nextState = !showWeatherForecast;
+                  setShowWeatherForecast(nextState);
+                  if (nextState) {
+                    handleSelectWeatherAirport(currentWeatherAirport);
+                  }
+                }}
+                title={showWeatherForecast ? '关闭气象环境预报看板' : '打开气象环境预报看板 (多机场15天逐小时多要素时序)'}
+                className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-900/90 hover:bg-slate-800 border rounded-xl backdrop-blur-xl transition-all duration-200 hover:scale-105 shadow-2xl cursor-pointer group ${
+                  showWeatherForecast
+                    ? 'border-sky-400 bg-sky-950/60 shadow-[0_0_15px_rgba(56,189,248,0.4)] text-sky-300'
+                    : 'border-slate-700/80 hover:border-sky-500/60 text-slate-300 hover:text-white'
+                }`}
+              >
+                <CloudSun className={`w-4 h-4 sm:w-5 sm:h-5 ${showWeatherForecast ? 'text-sky-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]' : 'text-sky-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]'}`} />
+              </button>
             </div>
 
             <MapContainer
@@ -3022,9 +3161,17 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
               className="w-full h-full relative z-0"
             >
               <TileLayer
-                url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                attribution="Esri World Imagery"
-                maxZoom={19}
+                url="https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}"
+                subdomains={['1', '2', '3', '4']}
+                attribution="高德全球卫星影像"
+                maxZoom={18}
+              />
+              <TileLayer
+                url="https://webst0{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}"
+                subdomains={['1', '2', '3', '4']}
+                attribution="高德全球注记与路网"
+                maxZoom={18}
+                opacity={0.85}
               />
               <MapFlyTo
                 location={focusedLocation}
@@ -3054,10 +3201,10 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                         key={`sat-track-${satItem.id}-${sIdx}`}
                         positions={segment}
                         pathOptions={{
-                          color: isSelected ? '#38bdf8' : (isMain ? '#38bdf8' : '#0ea5e9'),
-                          weight: isSelected ? 2.2 : (isMain ? 1.6 : 1.2),
-                          dashArray: isSelected ? '8 5' : (isMain ? '8 6' : '4 6'),
-                          opacity: isSelected ? 0.95 : (isMain ? 0.65 : 0.35),
+                          color: isSelected ? '#facc15' : (isMain ? '#38bdf8' : '#0ea5e9'),
+                          weight: isSelected ? 3.0 : (isMain ? 1.6 : 1.2),
+                          dashArray: isSelected ? '8 4' : (isMain ? '8 6' : '4 6'),
+                          opacity: isSelected ? 1.0 : (isMain ? 0.65 : 0.35),
                         }}
                       />
                     ))}
@@ -3176,6 +3323,15 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
               isFootprintActive={activeFootprint?.id === selectedRecord?.id}
             />
         </div>
+      )}
+
+      {/* ── 气象环境预报看板（底部中心浮层，跨 2D/3D 通用覆盖，置于看板最底层上方）── */}
+      {showWeatherForecast && (
+        <WeatherForecastBar
+          onClose={() => setShowWeatherForecast(false)}
+          selectedAirport={currentWeatherAirport}
+          onSelectAirport={handleSelectWeatherAirport}
+        />
       )}
     </div>
   )}
