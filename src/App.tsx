@@ -964,7 +964,7 @@ export function App() {
         {
           id: 'hist-fire-user-1',
           role: 'user',
-          content: '开启林火巡查任务',
+          content: '开始林火巡查任务',
           timestamp: '09:40',
           mode: 'time_series',
         },

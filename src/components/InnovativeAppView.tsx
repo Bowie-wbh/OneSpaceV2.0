@@ -954,7 +954,11 @@ function TimeSelectDropdown({
               }`}
             >
               <span className="truncate">{t.label}</span>
-              <span className="text-[9px] 2xl:text-[10px] text-slate-500 shrink-0">
+              <span className={`text-[9px] 2xl:text-[10px] shrink-0 font-sans px-1.5 py-0.5 rounded ${
+                !t.isPast 
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold' 
+                  : 'text-slate-500'
+              }`}>
                 {!t.isPast ? '当前' : `第${t.day}天`}
               </span>
             </button>
@@ -1166,15 +1170,16 @@ function MonitorCard({
 
   const satId = selectedSatelliteId || 'scs-04-16';
 
-  // 时间筛选：支持按具体时间点（如 2026/9/2 1:19）直接筛选回看
+  // 时间筛选：下拉列表第 1 项为【当前任务】，其余项为历史任务记录
   const timeOptions = useMemo(() => {
     return locations.map((loc, idx) => {
       const datePart = loc.capturedAt.split(' ')[0].replace(/\//g, '-');
       const [year, month, day] = datePart.split('-');
       const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       return {
-        id: `time-${idx + 1}`,
-        label: loc.capturedAt,
+        id: idx === 0 ? 'current-task' : `time-${idx + 1}`,
+        label: idx === 0 ? `当前任务 (${loc.capturedAt})` : loc.capturedAt,
+        rawTime: loc.capturedAt,
         startDate: formattedDate,
         endDate: '2026-09-30',
         day: parseInt(day, 10),
@@ -1184,12 +1189,62 @@ function MonitorCard({
     });
   }, [locations]);
 
-  // 面板默认展示：当前有执行中/同步中的任务时默认看当前时间点，否则回看选定时间点
-  const [selectedTimeId, setSelectedTimeId] = useState(() => (
-    (status === '进行中' || sync) ? 'time-1' : (timeOptions[1]?.id ?? 'time-1')
-  ));
+  // 面板默认选中【当前任务】
+  const [selectedTimeId, setSelectedTimeId] = useState<string>('current-task');
   const selectedTime = timeOptions.find((t) => t.id === selectedTimeId) ?? timeOptions[0];
   const isPastTime = selectedTime.isPast;
+
+  // 当前任务模拟过程状态：0=接收需求/筛选地点, 1=生成规划, 2=星上自主执行(逐条推进), 3=任务完成
+  const [simStep, setSimStep] = useState<number>(0);
+  const [simOnboardIndex, setSimOnboardIndex] = useState<number>(0);
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
+  const simTimersRef = useRef<NodeJS.Timeout[]>([]);
+
+  const clearSimTimers = () => {
+    simTimersRef.current.forEach(t => clearTimeout(t));
+    simTimersRef.current = [];
+  };
+
+  const startCurrentTaskSimulation = () => {
+    clearSimTimers();
+    setIsSimulating(true);
+    setSimStep(0);
+    setSimOnboardIndex(0);
+
+    // 0.8s: 筛选拍摄地点完成，进入生成任务规划
+    const t1 = setTimeout(() => {
+      setSimStep(1);
+      // 1.0s: 生成规划完成，进入星上自主执行（逐条点亮17步）
+      const t2 = setTimeout(() => {
+        setSimStep(2);
+        let obIdx = 0;
+        const interval = setInterval(() => {
+          obIdx += 1;
+          setSimOnboardIndex(obIdx);
+          if (obIdx >= PROGRESS_ONBOARD_STEPS.length) {
+            clearInterval(interval);
+            setSimStep(3);
+            setIsSimulating(false);
+          }
+        }, 320);
+        simTimersRef.current.push(interval as unknown as NodeJS.Timeout);
+      }, 1000);
+      simTimersRef.current.push(t2);
+    }, 800);
+    simTimersRef.current.push(t1);
+  };
+
+  useEffect(() => {
+    if (!isPastTime) {
+      startCurrentTaskSimulation();
+    } else {
+      clearSimTimers();
+      setIsSimulating(false);
+      setSimStep(3);
+      setSimOnboardIndex(PROGRESS_ONBOARD_STEPS.length);
+    }
+    return () => clearSimTimers();
+  }, [selectedTimeId, isPastTime]);
 
   useEffect(() => {
     setSelectedDay(selectedTime.day ?? null);
@@ -1490,86 +1545,175 @@ function MonitorCard({
               open={taskOpen}
               onToggle={() => setTaskOpen((v) => !v)}
             >
-              {/* 时间筛选：支持按具体时间点（如 2026/9/2 1:19:45）直接筛选 */}
+              {/* 时间筛选：下拉列表第 1 项为【当前任务】，选中后自动模拟执行过程 */}
               <TimeSelectDropdown
                 options={timeOptions}
                 selectedId={selectedTimeId}
-                onSelect={(id) => setSelectedTimeId(id)}
+                onSelect={(id) => {
+                  setSelectedTimeId(id);
+                  if (id === 'current-task' || id === 'time-1') {
+                    startCurrentTaskSimulation();
+                  }
+                }}
               />
 
-              {(isPastTime || isRunning) ? (
+              {!isPastTime ? (
+                /* 【当前任务】：选到后模拟真实执行过程（逐条展示当前任务进度的过程） */
                 <div className="space-y-1.5 2xl:space-y-2">
-                  {isPastTime ? (
-                  <div className="space-y-1.5 2xl:space-y-2">
-                    {(() => {
-                      const detail = buildPastCycleDayDetail(selectedTime.startDate, activeDay, locations);
-                      return (
-                        <>
-                          <ProgressStepSection index={0} label="筛选拍摄地点" status="done">
-                            <div className="space-y-1 2xl:space-y-1.5">
-                              {detail.locations.map((l) => (
-                                <div key={l.name} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                                  <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
-                                    <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{l.name}</span>
-                                  </span>
-                                  <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{l.lng}, {l.lat}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </ProgressStepSection>
+                  <ProgressStepSection
+                    index={0}
+                    label="筛选拍摄地点"
+                    status={simStep === 0 ? 'current' : 'done'}
+                  >
+                    <div className={`space-y-1 2xl:space-y-1.5 ${simStep === 0 ? 'animate-pulse' : ''}`}>
+                      <div className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
+                        <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
+                          <span className={`w-1.5 h-1.5 rounded-full ${simStep === 0 ? 'bg-sky-400 animate-ping' : 'bg-sky-400'} shrink-0`} />
+                          <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-200 truncate">{locations[0]?.name || '俄勒冈/爱达荷边界'}</span>
+                        </span>
+                        <span className="text-[9px] 2xl:text-[10px] font-mono text-sky-300 shrink-0">{locations[0]?.lng ?? -117.15}, {locations[0]?.lat ?? 44.52}</span>
+                      </div>
+                    </div>
+                  </ProgressStepSection>
 
-                          <ProgressStepSection index={1} label="生成任务规划" status="done">
-                            <div className="space-y-1 2xl:space-y-1.5">
-                              <div className="rounded-lg border border-white/10 overflow-hidden divide-y divide-white/[0.06]">
-                                {detail.planTable.map((row) => (
-                                  <div key={row.time + row.location} className="p-1.5 2xl:p-2 bg-white/[0.02] hover:bg-white/[0.05] transition-colors space-y-1">
-                                    <div className="flex items-center justify-between gap-1.5">
-                                      <span className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 truncate">{row.location}</span>
-                                      {row.taskId && (
-                                        <span className="text-[9px] 2xl:text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0 font-medium">
-                                          {row.taskId}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[9px] 2xl:text-[10px] text-slate-400 font-mono">
-                                      <Clock className="w-2.5 h-2.5 text-sky-400 shrink-0" />
-                                      <span>拍摄时间：{row.time}</span>
-                                    </div>
+                  <ProgressStepSection
+                    index={1}
+                    label="生成任务规划"
+                    status={simStep < 1 ? 'pending' : simStep === 1 ? 'current' : 'done'}
+                  >
+                    <div className="space-y-1 2xl:space-y-1.5">
+                      {simStep < 1 ? (
+                        <span className="inline-block px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold border bg-white/5 text-slate-400 border-white/10">
+                          等待规划…
+                        </span>
+                      ) : simStep === 1 ? (
+                        <span className="inline-block px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold border bg-sky-500/15 text-sky-300 border-sky-500/30 animate-pulse">
+                          正在生成任务规划…
+                        </span>
+                      ) : (
+                        <div className="rounded-lg border border-white/10 overflow-hidden divide-y divide-white/[0.06]">
+                          <div className="p-1.5 2xl:p-2 bg-white/[0.02] hover:bg-white/[0.05] transition-colors space-y-1">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 truncate">{locations[0]?.name || '俄勒冈/爱达荷边界'}</span>
+                              <span className="text-[9px] 2xl:text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0 font-medium">
+                                {locations[0]?.taskId || 'TASK_20260901075107'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[9px] 2xl:text-[10px] text-slate-400 font-mono">
+                              <Clock className="w-2.5 h-2.5 text-sky-400 shrink-0" />
+                              <span>拍摄时间：{locations[0]?.capturedAt || '2026/9/2 1:19'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ProgressStepSection>
+
+                  <ProgressStepSection
+                    index={2}
+                    label="卫星自主执行"
+                    status={simStep < 2 ? 'pending' : simStep === 2 ? 'current' : 'done'}
+                  >
+                    <div className="space-y-1.5 2xl:space-y-2">
+                      {/* 当前任务概览卡片 */}
+                      <div className="p-2 2xl:p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 space-y-1">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${simStep === 2 ? 'bg-sky-400 animate-ping' : simStep > 2 ? 'bg-emerald-400' : 'bg-slate-400'}`} />
+                            <span className="text-[10px] 2xl:text-[11px] font-bold text-sky-200">当前任务</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className={progressStageBadgeClass(simStep < 2 ? 0 : simOnboardIndex, PROGRESS_ONBOARD_STEPS.length)}>
+                              {progressStageLabel(simStep < 2 ? 0 : simOnboardIndex, PROGRESS_ONBOARD_STEPS.length)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startCurrentTaskSimulation();
+                              }}
+                              className="p-1 rounded-md bg-white/10 hover:bg-white/20 text-sky-300 hover:text-white transition-colors cursor-pointer"
+                              title="重新模拟过程"
+                            >
+                              <RotateCw className={`w-3 h-3 ${isSimulating ? 'animate-spin' : ''}`} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-[10px] 2xl:text-[11px] text-slate-200 font-semibold truncate">
+                          {locations[0]?.name || '俄勒冈/爱达荷边界'} · 应急红外火情巡查
+                        </div>
+                      </div>
+
+                      {/* 逐条展示当前任务进度的过程 */}
+                      <div className="space-y-1">
+                        <div className="text-[9px] 2xl:text-[10px] text-slate-400 font-medium px-0.5 flex items-center justify-between">
+                          <span>
+                            任务执行流程 ({Math.min(Math.max(0, simStep < 2 ? 0 : simOnboardIndex), PROGRESS_ONBOARD_STEPS.length)}/{PROGRESS_ONBOARD_STEPS.length})
+                          </span>
+                          <span className="text-sky-300 font-mono">
+                            {Math.round((Math.min(Math.max(0, simStep < 2 ? 0 : simOnboardIndex), PROGRESS_ONBOARD_STEPS.length) / PROGRESS_ONBOARD_STEPS.length) * 100)}%
+                          </span>
+                        </div>
+                        <div className="max-h-52 overflow-y-auto custom-scrollbar space-y-1 pr-0.5">
+                          {PROGRESS_ONBOARD_STEPS.map((stepName, stepIdx) => {
+                            const isDone = simStep > 2 || (simStep === 2 && simOnboardIndex > stepIdx);
+                            const isCurrent = simStep === 2 && simOnboardIndex === stepIdx;
+                            return (
+                              <div
+                                key={stepName}
+                                className={`flex items-center justify-between gap-2 px-2 py-1 rounded-md border text-[9px] 2xl:text-[10px] transition-all duration-200 ${
+                                  isDone
+                                    ? 'bg-white/[0.03] border-white/[0.06] text-slate-300'
+                                    : isCurrent
+                                    ? 'bg-sky-500/15 border-sky-400/40 text-sky-200 shadow-[0_0_8px_rgba(56,189,248,0.2)]'
+                                    : 'bg-white/[0.01] border-white/[0.03] text-slate-500 opacity-60'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${
+                                    isDone
+                                      ? 'bg-emerald-500/20 text-emerald-400'
+                                      : isCurrent
+                                      ? 'bg-sky-500/30 text-sky-300 ring-1 ring-sky-400/50'
+                                      : 'bg-white/5 text-slate-500'
+                                  }`}>
+                                    {isDone ? (
+                                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                    ) : isCurrent ? (
+                                      <RotateCw className="w-2.5 h-2.5 animate-spin" />
+                                    ) : (
+                                      <span className="text-[8px] font-mono">{stepIdx + 1}</span>
+                                    )}
                                   </div>
-                                ))}
-                              </div>
-                            </div>
-                          </ProgressStepSection>
-
-                          <ProgressStepSection index={2} label="卫星自主执行" status="done">
-                            <div className="space-y-1 2xl:space-y-1.5">
-                              <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                                <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">星上任务执行</span>
-                                <span className={progressStageBadgeClass(PROGRESS_ONBOARD_STEPS.length, PROGRESS_ONBOARD_STEPS.length)}>
-                                  {progressStageLabel(PROGRESS_ONBOARD_STEPS.length, PROGRESS_ONBOARD_STEPS.length)}
+                                  <span className={`font-medium truncate ${isCurrent ? 'font-bold text-sky-100' : ''}`}>{stepName}</span>
+                                </div>
+                                <span className="font-mono shrink-0 text-[8.5px]">
+                                  {isDone ? '已完成' : isCurrent ? '执行中…' : '待执行'}
                                 </span>
                               </div>
-                            </div>
-                          </ProgressStepSection>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </ProgressStepSection>
 
-                          <ProgressStepSection index={3} label="任务完成" status="done" />
-                        </>
-                      );
-                    })()}
-                  </div>
-                ) : !sync ? (
-                  <div className="p-2.5 2xl:p-3 rounded-xl border border-dashed border-white/15 flex items-center gap-2">
-                    <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0 animate-pulse" />
-                    <span className="text-[11px] 2xl:text-xs font-semibold text-slate-400">正在接收拍摄需求…</span>
-                  </div>
-                ) : (
+                  <ProgressStepSection
+                    index={3}
+                    label="任务完成"
+                    status={simStep >= 3 ? 'done' : 'pending'}
+                  />
+                </div>
+              ) : (
+                /* 历史任务：查看选定日期的历史完成记录 */
                 <div className="space-y-1.5 2xl:space-y-2">
-                    {activeDay === sync.day ? (
-                      <div className="space-y-1.5 2xl:space-y-2">
-                        <ProgressStepSection key={`step0-${stepStatus(0)}`} index={0} label="接收拍摄需求" status={stepStatus(0)}>
-                          <div className={`space-y-1 2xl:space-y-1.5 ${stepStatus(0) === 'current' ? 'animate-pulse' : ''}`}>
-                            {sync.locations.map((l) => (
+                  {(() => {
+                    const detail = buildPastCycleDayDetail(selectedTime.startDate, activeDay, locations, selectedTime.label);
+                    return (
+                      <>
+                        <ProgressStepSection index={0} label="筛选拍摄地点" status="done">
+                          <div className="space-y-1 2xl:space-y-1.5">
+                            {detail.locations.map((l) => (
                               <div key={l.name} className="flex items-center justify-between gap-2 px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
                                 <span className="flex items-center gap-1 2xl:gap-1.5 min-w-0">
                                   <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
@@ -1581,59 +1725,79 @@ function MonitorCard({
                           </div>
                         </ProgressStepSection>
 
-                        <ProgressStepSection key={`step1-${stepStatus(1)}`} index={1} label="生成任务规划" status={stepStatus(1)}>
+                        <ProgressStepSection index={1} label="生成任务规划" status="done">
                           <div className="space-y-1 2xl:space-y-1.5">
-                            {!sync.planGenerated && (
-                              <span className="inline-block px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold border bg-white/5 text-slate-400 border-white/10">
-                                规划中…
-                              </span>
-                            )}
-                            {sync.planGenerated && sync.planTable && (
-                              <div className="rounded-lg border border-white/10 overflow-hidden divide-y divide-white/[0.06]">
-                                {sync.planTable.map((row) => (
-                                  <div key={row.time + row.location} className="p-1.5 2xl:p-2 bg-white/[0.02] hover:bg-white/[0.05] transition-colors space-y-1">
-                                    <div className="flex items-center justify-between gap-1.5">
-                                      <span className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 truncate">{row.location}</span>
-                                      {row.taskId && (
-                                        <span className="text-[9px] 2xl:text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0 font-medium">
-                                          {row.taskId}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[9px] 2xl:text-[10px] text-slate-400 font-mono">
-                                      <Clock className="w-2.5 h-2.5 text-sky-400 shrink-0" />
-                                      <span>拍摄时间：{row.time}</span>
-                                    </div>
+                            <div className="rounded-lg border border-white/10 overflow-hidden divide-y divide-white/[0.06]">
+                              {detail.planTable.map((row) => (
+                                <div key={row.time + row.location} className="p-1.5 2xl:p-2 bg-white/[0.02] hover:bg-white/[0.05] transition-colors space-y-1">
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <span className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 truncate">{row.location}</span>
+                                    {row.taskId && (
+                                      <span className="text-[9px] 2xl:text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 shrink-0 font-medium">
+                                        {row.taskId}
+                                      </span>
+                                    )}
                                   </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </ProgressStepSection>
-
-                        <ProgressStepSection key={`step2-${stepStatus(2)}`} index={2} label="每天执行步骤同步" status={stepStatus(2)}>
-                          <div className="space-y-1 2xl:space-y-1.5">
-                            <div className="flex items-center justify-between px-2 py-1 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-white/5 border border-white/10">
-                              <span className="text-[10px] 2xl:text-[11px] font-semibold text-slate-300">星上任务执行</span>
-                              <span className={progressStageBadgeClass(sync.onboardStepIndex, PROGRESS_ONBOARD_STEPS.length)}>
-                                {progressStageLabel(sync.onboardStepIndex, PROGRESS_ONBOARD_STEPS.length)}
-                              </span>
+                                  <div className="flex items-center gap-1 text-[9px] 2xl:text-[10px] text-slate-400 font-mono">
+                                    <Clock className="w-2.5 h-2.5 text-sky-400 shrink-0" />
+                                    <span>拍摄时间：{row.time}</span>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         </ProgressStepSection>
 
-                        <ProgressStepSection key={`step3-${stepStatus(3)}`} index={3} label="任务完成" status={stepStatus(3)} />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 px-2 py-1.5 2xl:px-2.5 2xl:py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="text-[10px] 2xl:text-[11px] font-semibold text-emerald-400">第{activeDay}天任务已执行完成</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              ) : null}
+                        <ProgressStepSection index={2} label="卫星自主执行" status="done">
+                          <div className="space-y-1.5 2xl:space-y-2">
+                            {/* 历史任务概览 */}
+                            <div className="p-2 2xl:p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 space-y-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                  <span className="text-[10px] 2xl:text-[11px] font-bold text-sky-200">{selectedTime.label}</span>
+                                </div>
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                                  已完成
+                                </span>
+                              </div>
+                              <div className="text-[10px] 2xl:text-[11px] text-slate-200 font-semibold truncate">
+                                {detail.locations[0]?.name || '目标区域'} · 应急红外火情巡查
+                              </div>
+                            </div>
+
+                            {/* 逐条展示执行过程 */}
+                            <div className="space-y-1">
+                              <div className="text-[9px] 2xl:text-[10px] text-slate-400 font-medium px-0.5 flex items-center justify-between">
+                                <span>任务执行全流程 ({PROGRESS_ONBOARD_STEPS.length}/{PROGRESS_ONBOARD_STEPS.length})</span>
+                                <span className="text-emerald-400 font-mono">100%</span>
+                              </div>
+                              <div className="max-h-52 overflow-y-auto custom-scrollbar space-y-1 pr-0.5">
+                                {PROGRESS_ONBOARD_STEPS.map((stepName, stepIdx) => (
+                                  <div
+                                    key={stepName}
+                                    className="flex items-center justify-between gap-2 px-2 py-1 rounded-md bg-white/[0.03] border border-white/[0.06] text-[9px] 2xl:text-[10px]"
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                      </div>
+                                      <span className="text-slate-200 font-medium truncate">{stepName}</span>
+                                    </div>
+                                    <span className="text-slate-400 font-mono shrink-0">已完成</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </ProgressStepSection>
+
+                        <ProgressStepSection index={3} label="任务完成" status="done" />
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </MonitorSection>
           </div>
         )}
@@ -1994,16 +2158,19 @@ function progressStageBadgeClass(stepIndex: number, total: number): string {
 }
 
 // 为历史周期的某一天生成一份确定性（基于日期+天数）的已完成任务详情，用于回看过往执行进度
-function buildPastCycleDayDetail(cycleStartDate: string, day: number, pool: Location[]) {
+function buildPastCycleDayDetail(cycleStartDate: string, day: number, pool: Location[], timeLabel?: string) {
   if (pool.length === 0) {
     return { locations: [] as { name: string; lng: number; lat: number }[], planTable: [] as { time: string; location: string; taskId?: string }[] };
   }
-  const matchingLoc = pool.find((l) => {
-    const d = l.capturedAt.split(' ')[0].replace(/\//g, '-');
-    const [y, m, dayStr] = d.split('-');
-    const formatted = `${y}-${m.padStart(2, '0')}-${dayStr.padStart(2, '0')}`;
-    return formatted === cycleStartDate;
-  });
+  let matchingLoc = timeLabel ? pool.find((l) => l.capturedAt === timeLabel) : undefined;
+  if (!matchingLoc) {
+    matchingLoc = pool.find((l) => {
+      const d = l.capturedAt.split(' ')[0].replace(/\//g, '-');
+      const [y, m, dayStr] = d.split('-');
+      const formatted = `${y}-${m.padStart(2, '0')}-${dayStr.padStart(2, '0')}`;
+      return formatted === cycleStartDate;
+    });
+  }
   const picked = matchingLoc ? [matchingLoc] : [pool[day % pool.length]];
   const dayLocations = picked.map((l) => ({ name: l.name, lng: l.lng, lat: l.lat }));
   const planTable = picked.map((l) => ({
@@ -2028,7 +2195,9 @@ function ProgressStepSection({
   status: ProgressStepStatus;
   children?: React.ReactNode;
 }) {
-  const [expanded, setExpanded] = useState(status === 'current' || (status === 'done' && index === 1));
+  const [expanded, setExpanded] = useState(
+    status === 'current' || (status === 'done' && (index === 1 || index === 2))
+  );
   const isLast = index === totalSteps - 1;
 
   return (
