@@ -48,7 +48,7 @@ const WORKSPACE_SUGGESTED_PROMPTS = [
   '安排明天下午宁波港口的观测任务，并检测是否有火灾',
   '现在星座中的卫星都在什么位置',
   '未来24小时内星座有多少卫星可以经过之江实验室',
-  '生成过去十天星座整星状态报告',
+  '生成过去十天星座卫星整体状态报告',
   '生成过去十天蓄电池平衡分析报告',
 ];
 
@@ -407,12 +407,18 @@ export function App() {
         behavior: smooth ? 'smooth' : 'auto',
       });
     }
+    setShowScrollToBottom(false);
   };
 
   const handleScroll = () => {
     if (!conversationContainerRef.current) return;
+    if (messages.length === 0) {
+      setShowScrollToBottom(false);
+      return;
+    }
     const { scrollTop, scrollHeight, clientHeight } = conversationContainerRef.current;
-    const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
+    // 只有当消息内容超出可视区，且用户向上滚动离开底部超过 120px 时才显示返回最近对话按钮
+    const isScrolledUp = scrollHeight > clientHeight + 60 && (scrollHeight - scrollTop - clientHeight > 120);
     setShowScrollToBottom(isScrolledUp);
   };
 
@@ -425,6 +431,8 @@ export function App() {
         }
       }, 60);
       return () => clearTimeout(timer);
+    } else {
+      setShowScrollToBottom(false);
     }
   }, [messages, isGenerating]);
 
@@ -603,12 +611,14 @@ export function App() {
     setPrefillPrompt('');
     setIsChatLocked(false);
     setSingleOrbitInjectedTask(null);
+    setShowScrollToBottom(false);
   };
 
   // 选择历史会话
   const handleSelectSession = (sessionId: string) => {
     clearReplayTimers();
     setSelectedSessionId(sessionId);
+    setShowScrollToBottom(false);
     const session = historySessions.find(s => s.id === sessionId);
     if (!session) return;
 
@@ -639,13 +649,43 @@ export function App() {
           id: 'hist-user-nb-1',
           role: 'user',
           content: '安排明天下午宁波港口的观测任务，并检测是否有火灾',
+          timestamp: '09:28',
+          mode: 'regular',
+        },
+        {
+          id: 'hist-asst-nb-0',
+          role: 'assistant',
+          thinkingProcess: '1. 多轮对话意图解析：用户提出观测需求【宁波港口火情观测】。\n2. 要素完整性检查：已识别成像地点【宁波舟山港口及周边水域】、任务时段【2026-09-02 12:00:00 ~ 18:00:00】和在轨计算需求【星载红外火灾检测模型】，选用载荷待确认。\n3. 决策：向用户确认本次火情观测希望选用的载荷类型。',
+          content: '收到您关于【宁波舟山港口及周边水域】的观测规划需求！\n针对火情检测任务，推荐使用红外热成像载荷。请问本次任务您希望使用哪种**载荷类型**？',
+          timestamp: '09:28',
+          mode: 'regular',
+          regularStage: 'requirement_completion',
+          isActionConfirmed: true,
+          requirementDraft: {
+            location: '宁波舟山港口及周边水域 (29.8821°N, 121.5642°E)',
+            onboardComputing: '需要在轨计算：星载轻量化云雪快筛 + 红外火灾检测模型',
+            startTime: '2026-09-02 12:00:00',
+            endTime: '2026-09-02 18:00:00',
+            currentField: 'payload',
+            options: [
+              '高分辨率红外热成像仪 (热红外测温)',
+              '高分多光谱光学相机 (0.5m全色/2m多光谱)',
+              '多光谱相机 + 红外热成像仪 (双载荷同步)',
+              'C波段合成孔径雷达 (SAR 全天候)'
+            ],
+          },
+        },
+        {
+          id: 'hist-user-nb-1-payload',
+          role: 'user',
+          content: '高分辨率红外热成像仪 (热红外测温)',
           timestamp: '09:29',
           mode: 'regular',
         },
         {
           id: 'hist-asst-nb-1',
           role: 'assistant',
-          thinkingProcess: '1. 多轮对话意图解析：用户提出观测需求【宁波港口火情观测】。\n2. 要素完整性检查：载荷、地点、在轨计算、时段已全部识别。\n3. 决策：列出全量要素清单供用户确认。',
+          thinkingProcess: '1. 多轮对话意图解析：用户已确认选用载荷【高分辨率红外热成像仪 (热红外测温)】。\n2. 要素完整性检查：载荷、地点、在轨计算、时段已全部识别完毕。\n3. 决策：列出全量要素清单供用户确认。',
           content: '5 项任务关键要素已全部识别完毕！请确认以下任务要素信息是否准确无误：',
           timestamp: '09:29',
           mode: 'regular',
@@ -986,9 +1026,9 @@ export function App() {
     const lower = text.toLowerCase();
 
     // 1. 提取载荷
-    if (/光学|多光谱|高分|可见光|全色|相机/i.test(text)) {
+    if (/光学|多光谱|高分|可见光|全色/i.test(text)) {
       draft.payload = '高分多光谱光学相机 (0.5m全色/2m多光谱)';
-    } else if (/红外|热红外|热成像|测温|火灾|火情/i.test(text)) {
+    } else if (/红外|热红外|热成像|测温/i.test(text)) {
       draft.payload = '高分辨率红外热成像仪 (热红外测温)';
     } else if (/sar|雷达|微波|合成孔径/i.test(text)) {
       draft.payload = 'C波段合成孔径雷达 (SAR 全天候)';
@@ -1260,6 +1300,71 @@ ${tableRows}`;
     }, 200);
   };
 
+  // =========================================================================
+  // 核心业务流程：之江实验室未来24小时过境卫星查询（智能计算并呈现过境卫星、过境时间、侧摆角与最大仰角）
+  // =========================================================================
+  const handleZhijiangOverpassFlow = (userText: string) => {
+    const userMsgId = 'msg-' + Date.now();
+    const asstMsgId = 'msg-' + (Date.now() + 1);
+
+    const newUserMsg: ChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      content: userText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      mode: 'qa',
+    };
+
+    setMessages(prev => [...prev, newUserMsg]);
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = now.getMonth() + 1;
+    const dd = now.getDate();
+    const hh = String(now.getHours()).padStart(2, '0');
+
+    const nextDate = new Date(now.getTime() + 24 * 3600 * 1000);
+    const nextYyyy = nextDate.getFullYear();
+    const nextMm = nextDate.getMonth() + 1;
+    const nextDd = nextDate.getDate();
+
+    const startTimeStr = `${yyyy}年${mm}月${dd}日${hh}:00`;
+    const endTimeStr = `${nextYyyy}年${nextMm}月${nextDd}日${hh}:00`;
+
+    const OVERPASS_SATELLITES = [
+      { code: 'SCS-01-06', time: `${mm}月${dd}日 16:42`, rollAngle: '20.9°', maxElevation: '67.4°' },
+      { code: 'SCS-01-05', time: `${mm}月${dd}日 21:17`, rollAngle: '23.4°', maxElevation: '64.6°' },
+      { code: 'SCS-01-03', time: `${nextMm}月${nextDd}日 04:53`, rollAngle: '23.4°', maxElevation: '64.6°' },
+      { code: 'SCS-04-15', time: `${nextMm}月${nextDd}日 04:53`, rollAngle: '23.4°', maxElevation: '64.6°' },
+    ];
+
+    const thinking = `1. 用户意图识别：查询未来 24 小时内在轨星座对【之江实验室（30.271046°N, 119.964461°E）】的过境几何与可视窗口。
+2. 动力学轨道与视场解算：
+   - 基于全星座 16 颗卫星两行根数 (TLE) 外推未来 24 小时（${startTimeStr} 至 ${endTimeStr}）星下点轨迹。
+   - 过滤过境最大仰角 > 60°、侧摆角满足有效载荷成像视场要求的窗口。
+   - 筛选出 SCS-01-06、SCS-01-05、SCS-01-03、SCS-04-15 共 4 颗过境卫星及对应几何参数。
+3. 结构化呈现：以 Markdown 表格输出卫星编号、过境时间、侧摆角及最大仰角。`;
+
+    const tableRows = OVERPASS_SATELLITES.map(
+      s => `| ${s.code} | ${s.time} | ${s.rollAngle} | ${s.maxElevation} |`
+    ).join('\n');
+
+    const content = `根据实时卫星轨道数据查询，未来24小时内（${startTimeStr}至${endTimeStr}，北京时间），之江实验室（坐标：30.271046°N, 119.964461°E）上空预计共有 4颗 卫星过境。详情如下：
+
+| 卫星编号 | 过境时间（北京时间） | 侧摆角 | 最大仰角 |
+| :---: | :---: | :---: | :---: |
+${tableRows}`;
+
+    setTimeout(() => {
+      streamAssistantResponse({
+        messageId: asstMsgId,
+        thinking,
+        content,
+        mode: 'qa',
+      });
+    }, 200);
+  };
+
   // 从问答卡片中直接发起该方案的任务规划
   const handleStartPlanFromQA = (location: string, option?: QAWindowOption) => {
     const promptText = option 
@@ -1271,8 +1376,12 @@ ${tableRows}`;
   // =========================================================================
   // 核心业务流程：健康管理模式（星载分系统健康诊断与遥测评估，整合自原“健康管理”对话）
   // =========================================================================
-  // 路由评估交互状态机：等待用户指定卫星名称或编号
-  const [routerFlowState, setRouterFlowState] = useState<{ type: 'idle' } | { type: 'awaiting_satellite' }>({ type: 'idle' });
+  // 健康诊断与遥测评估交互状态机：等待用户指定路由卫星或蓄电池分析卫星
+  const [routerFlowState, setRouterFlowState] = useState<
+    | { type: 'idle' }
+    | { type: 'awaiting_satellite' }
+    | { type: 'awaiting_battery_satellite' }
+  >({ type: 'idle' });
 
   // 辅助函数：根据用户输入的文本匹配卫星名称/编号
   const matchSatelliteTag = (text: string): { satTag: string; matchedSatId?: string } => {
@@ -1288,6 +1397,114 @@ ${tableRows}`;
     }
     return { satTag: trimmed };
   };
+
+  // 生成星座整体状态报告 Markdown 内容
+const getConstellationReportContent = () => `### 三体计算星座过去十天整体状态报告
+
+**报告周期**：2026-09-14 00:00 — 2026-09-23 12:00（北京时间）
+**统计对象**：三体计算星座在轨卫星（模拟在轨48颗）
+**总体结论**：星座运行状态优良，核心计算与星间链路服务稳定，1颗卫星降级、1颗维护，无失效卫星。
+
+一、关键指标总览
+
+| 指标 | 数值 | 状态 |
+| :--- | :--- | :--- |
+| **在轨卫星** | 48颗 | 正常 |
+| **健康卫星** | 46颗 | 正常 |
+| **降级卫星** | 1颗（三体计算星座-17星） | 关注 |
+| **维护/升级卫星** | 1颗（三体计算星座-23星） | 正常 |
+| **失效卫星** | 0颗 | 正常 |
+| **星座可用度** | 99.2% | 优 |
+| **星间链路平均连通率** | 99.6% | 优 |
+| **星地链路成功率** | 85.7% | 良 |
+| **完成在轨计算任务** | 1,296个 | 正常 |
+| **异常事件** | 4起 | 3起已恢复，1起降级 |
+
+二、每日状态摘要
+
+| 日期 | 健康/在轨 | 之江实验室过境次数 | 异常事件 |
+| :--- | :--- | :--- | :--- |
+| **9月14日** | 48/48 | 11 | 无 |
+| **9月15日** | 48/48 | 10 | 无 |
+| **9月16日** | 47/48 | 12 | 单粒子翻转，5分钟后恢复 |
+| **9月17日** | 48/48 | 11 | 无 |
+| **9月18日** | 48/48 | 10 | 碎片规避，消耗推进剂约0.8 m/s |
+| **9月19日** | 48/48 | 12 | 无 |
+| **9月20日** | 47/48 | 11 | 星间链路中断23分钟，自动恢复 |
+| **9月21日** | 48/48 | 10 | 无 |
+| **9月22日** | 47/48 | 12 | 反作用轮异常，降级运行 |
+| **9月23日** | 46/48 | 13 | 软件升级，暂时维护 |
+| **合计** | — | 112次 | 4起 |
+
+三、分系统状态
+
+- **轨道状态**：平均轨道高度约512 km，倾角97.4°，轨道保持正常，高度衰减均小于1.2 km。
+- **电源系统**：平均电池SOC约82%，最低45%，太阳能阵输出正常。
+- **热控系统**：平均温度22°C，范围-5°C至48°C，无过热告警。
+- **星间链路**：平均连通率99.6%，最大中断23分钟，已自动切换恢复。
+- **计算载荷**：平均利用率68%，完成AI推理任务1,284次、训练任务12次，上注模型8个，下传数据约2.7 TB。
+- **地面站链路**：之江实验室地面站过境112次，成功建链96次，成功率85.7%，失败主因降雨和云层遮挡。
+
+四、异常与处置
+
+1. **9月16日**：三体计算星座-09星发生单粒子翻转，星载计算机重启，5分钟后恢复。
+2. **9月18日**：三体计算星座-22星触发碎片预警，执行规避机动，消耗约0.8 m/s推进剂。
+3. **9月20日**：星间链路中断23分钟，系统自动切换备用路由后恢复。
+4. **9月22日**：三体计算星座-17星反作用轮异常，姿态控制精度下降至0.05°，已降级运行。
+5. **9月23日**：三体计算星座-23星进行软件升级，暂时进入维护模式。
+
+五、结论与建议
+
+过去十天，三体计算星座整体运行稳定，可用度99.2%，满足之江实验室在轨计算与星地链路服务需求。建议后续：
+
+- **重点关注17星反作用轮状态**，安排冗余切换或备份卫星接替；
+- **更新TLE数据**，提升过境预报精度；
+- **未来10天预计之江实验室上空过境约105—115次**，其中光学可见约35—40次；
+- **结合空间天气预警**，防范单粒子事件。`;
+
+// 生成蓄电池平衡分析报告 Markdown 内容
+  const getBatteryReportContent = (satTag: string) => `已帮您生成${satTag}的过去十天蓄电池平衡分析报告：
+要点速览：过去十天蓄电池整体能量盈余、无缺失统计日、电压平稳，运行正常。
+
+详细报告如下：
+
+### ${satTag}·过去十天蓄电池平衡分析报告
+
+#### 数据摘要
+| 项目 | 内容 | 项目 | 内容 |
+| :--- | :--- | :--- | :--- |
+| **卫星名称** | ${satTag} | **请求时间** | 2026-09-14 00:00:00 ～ 2026-09-23 23:59:59 |
+| **实际数据覆盖** | 2026-09-14 10:25:22 ～ 2026-09-23 11:01:33 | **样本量** | 2,682 条 |
+| **统计日覆盖** | 覆盖 10/10 个统计日 | **缺失统计日** | 无 |
+| **诊断类型** | 蓄电池平衡诊断 | **数据语义** | 充放电能量收支平衡 |
+
+一、初步结论
+
+**能量盈余**
+全时段平均净电流为 **+3.422 A**，充电盈余样本占比为 **78.7%**。共 10 天具备有效净电流数据，其中 8 天表现为日均充电盈余。当前覆盖段的充电输入总体高于放电消耗。
+
+二、核心指标
+
+| 指标 | 数值 | 指标类型 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **平均净电流** | **+3.422 A** | 计算指标 | 净电流 = 母线电流 − 负载电流，观测范围 -17.97～14.61 A。 |
+| **充电盈余样本占比** | **78.7%** | 计算指标 | 充电盈余 2,110 条，放电 572 条，近似平衡 0 条。 |
+| **蓄电池电压范围** | **26.79～28.39 V** | 观测指标 | 电压均值 27.995 V。 |
+| **最大充电倍率** | **0.225 C** | 计算指标 | 由上游额定容量换算 |
+| **最大放电深度** | **31.9%** | 计算指标 | 由上游电压与 SOC 关系推导 |
+
+三、趋势图表
+
+- **蓄电池日均净电流柱形图**：8 个统计日为盈余、2 个为亏欠、0 个接近平衡。
+- **蓄电池日均电压折线图**：有效电压范围 26.79～28.39 V。
+
+四、分析与结论
+
+1. 覆盖段内蓄电池整体呈能量盈余：平均净电流 **+3.422 A**，充电盈余样本占比 **78.7%**；10 个统计日中 8 天日均盈余、2 天日均亏欠，说明盈余并非个别峰值单独驱动，但覆盖段内方向并非全程一致，结论仅适用于实际数据覆盖段。
+2. 电压均值 **27.995 V**（范围 **26.79～28.39 V**），整体平稳，与净电流总体盈余方向未明显背离；电压仅作辅助证据，不能单凭电压证明盈余幅度或充放电深度。
+3. 请求时段 2026-09-14～09-23，实际覆盖 2026-09-14 10:25:22～09-23 11:01:33，10 个统计日均有有效数据、无缺失；尚未覆盖请求时段首尾完整边界，结论仅代表实际覆盖段。建议保持连续监测，若后续连续多日净电流转负或电压均值下行，再进一步复核。
+
+> **评估边界**：本次评估仅反映实际覆盖段的充放电能量收支，不涉及单体压差、单体一致性或均衡电路状态。`;
 
   // 生成路由系统评估报告 Markdown 内容
   const getRouterReportContent = (satTag: string) => `为您生成“${satTag}”的路由系统评估报告：
@@ -1397,7 +1614,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     let content = '';
     let quickReplyOptions: string[] | undefined = undefined;
 
-    // 如果处于等待指定卫星状态，用户本次回复为卫星名称/编号
+    // 如果处于等待路由评估指定卫星状态
     if (routerFlowState.type === 'awaiting_satellite') {
       const { satTag, matchedSatId } = matchSatelliteTag(userText);
       if (matchedSatId) {
@@ -1407,9 +1624,26 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
 
       thinking = `正在调用 ${satTag} 星载时序遥测数据库 (ClickHouse)...\n- 加载评估周期：2026-07-22 ～ 2026-07-31\n- 提取 ${satTag} 星载路由系统 22 项核心指标时序数据\n- 评估 CPU/内存/磁盘占用率分布及异常事件\n- 关联 Q01 原始告警与同窗时序异常比对\n- 计算健康度评分 (65.5/100) 及评分置信度...`;
       content = getRouterReportContent(satTag);
-    } else if (userText.includes('蓄电池') || userText.includes('平衡')) {
-      thinking = `已提取最近10天能源分系统蓄电池单体电压、充放电电流及温度遥测序列。\n- 单体电压极差统计分析...\n- 荷电状态(SOC)均衡度评估...`;
-      content = `【蓄电池平衡分析报告（最近10天）】\n\n1. **总体评估**：蓄电池组整体健康度良好（SOH = 97.5%），无单体严重衰减现象。\n2. **电压极差**：最大单体电压差值维持在 \`14.2 mV\` 以内（阈值 < 25mV），处于安全合规区间。\n3. **平衡状态**：第7天至第9天光照阴影交替期间，串联单体3#出现微弱压差偏移（约 8.5mV），BMS已自动触发主动均衡充电。\n4. **建议**：建议在下次轨道过境时进行一次例行脉冲校准，无需人工干预。`;
+    } else if (routerFlowState.type === 'awaiting_battery_satellite') {
+      // 等待蓄电池平衡分析报告的卫星代号选择/输入
+      const { satTag, matchedSatId } = matchSatelliteTag(userText);
+      if (matchedSatId) {
+        setSelectedSatelliteId(matchedSatId);
+      }
+      setRouterFlowState({ type: 'idle' });
+
+      thinking = `正在提取 ${satTag} 过去十天能源分系统蓄电池单体电压、充放电电流及温度遥测序列...\n- 计算全时段平均净电流及充电盈余占比...\n- 统计 10 个统计日数据完整度与极差趋势...`;
+      content = getBatteryReportContent(satTag);
+    } else if (userText.includes('星座') || (userText.includes('整体状态') || userText.includes('状态报告') || userText.includes('过去十天'))) {
+      // 生成过去十天星座卫星整体状态报告
+      thinking = `1. 识别星座整体运行状态统计与诊断意图。\n2. 检索 2026-09-14 至 2026-09-23 期间在轨48颗计算卫星遥测日志、星间链路与过境建链数据...\n3. 统计关键可用度指标及 4 起异常事件处理结果。`;
+      content = getConstellationReportContent();
+    } else if (userText.includes('蓄电池') || userText.includes('电池平衡') || userText.includes('平衡')) {
+      // 蓄电池平衡分析入口：询问生成哪颗卫星的报告
+      setRouterFlowState({ type: 'awaiting_battery_satellite' });
+      thinking = `1. 识别蓄电池平衡分析报告生成意图。\n2. 查询在轨卫星列表...\n3. 给出推荐卫星列表供选择。`;
+      content = `请问您想生成的是哪颗卫星的过去十天蓄电池平衡分析报告`;
+      quickReplyOptions = satellites.map(s => s.code ? `${s.name} (${s.code})` : s.name);
     } else if (userText.includes('路由') || userText.includes('状态')) {
       // 路由系统评估入口 Step 1：询问评估哪颗卫星
       setRouterFlowState({ type: 'awaiting_satellite' });
@@ -1466,22 +1700,26 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       // 判断下一个待补全要素
       if (!parsedDraft.payload) {
         parsedDraft.currentField = 'payload';
-        parsedDraft.options = [
+        const isFireTask = /火灾|火情|热点|火斑/i.test(userText) || /火灾|火情/i.test(parsedDraft.onboardComputing || '');
+        parsedDraft.options = isFireTask ? [
+          '高分辨率红外热成像仪 (热红外测温)',
+          '高分多光谱光学相机 (0.5m全色/2m多光谱)',
+          '多光谱相机 + 红外热成像仪 (双载荷同步)',
+          'C波段合成孔径雷达 (SAR 全天候)'
+        ] : [
           '高分多光谱光学相机 (0.5m全色/2m多光谱)',
           '高分辨率红外热成像仪 (热红外测温)',
           '多光谱相机 + 红外热成像仪 (双载荷同步)',
           'C波段合成孔径雷达 (SAR 全天候)'
         ];
 
-        const thinking = `1. 多轮对话意图解析：用户提出观测需求【${targetName}】。
-2. 要素完整性检查：
-   - 载荷类型：[待补全]
-   - 成像地点：【${parsedDraft.location}】
-   - 在轨计算需求：[待补全]
-   - 任务起止时间：[待补全]
-3. 决策：地点已明确为【${parsedDraft.location}】，首轮向用户确认所选用的载荷类型。`;
+        const thinking = isFireTask
+          ? `1. 多轮对话意图解析：用户提出观测需求【${targetName}】。\n2. 要素完整性检查：\n   - 选用载荷：[待确认]\n   - 成像地点：【${parsedDraft.location}】\n   - 在轨计算需求：【${parsedDraft.onboardComputing || '待确认'}】\n   - 任务起止时间：【${parsedDraft.startTime ? `${parsedDraft.startTime} ~ ${parsedDraft.endTime}` : '待确认'}】\n3. 决策：已识别火情检测与时空要素，向用户确认本次火情观测希望选用的载荷类型。`
+          : `1. 多轮对话意图解析：用户提出观测需求【${targetName}】。\n2. 要素完整性检查：\n   - 载荷类型：[待补全]\n   - 成像地点：【${parsedDraft.location}】\n   - 在轨计算需求：[待补全]\n   - 任务起止时间：[待补全]\n3. 决策：地点已明确为【${parsedDraft.location}】，首轮向用户确认所选用的载荷类型。`;
 
-        const content = `收到您关于【${parsedDraft.location || targetName}】的观测规划需求！\n请问本次任务您希望使用哪种**载荷类型**？（支持直接自然语言输入描述，如“用高分光学相机”等）：`;
+        const content = isFireTask
+          ? `收到您关于【${parsedDraft.location || targetName}】的观测规划需求！\n针对火情检测任务，推荐使用红外热成像载荷。请问本次任务您希望使用哪种**载荷类型**？（支持点击下方快捷选项或输入描述）：`
+          : `收到您关于【${parsedDraft.location || targetName}】的观测规划需求！\n请问本次任务您希望使用哪种**载荷类型**？（支持直接自然语言输入描述，如“用高分光学相机”等）：`;
 
         streamAssistantResponse({
           messageId: asstMsgId,
@@ -2466,7 +2704,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
 
   // 用户在多星选择胶囊中点击某颗卫星后，作为用户消息发送并继续发起任务
   const handleSelectSingleOrbitQuickReply = (messageId: string, satName: string) => {
-    if (routerFlowState.type === 'awaiting_satellite') {
+    if (routerFlowState.type === 'awaiting_satellite' || routerFlowState.type === 'awaiting_battery_satellite') {
       setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, isActionConfirmed: true } : m)));
       handleHealthCheckFlow(satName);
       return;
@@ -3037,7 +3275,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       return;
     }
 
-    const isHealthIntent = routerFlowState.type === 'awaiting_satellite' || /蓄电池|电池平衡|姿轨控|健康评估|健康诊断|健康度|健康管理|遥测健康|星载路由系统|路由系统|路由.*状态|分系统状态|卫星.*健康/i.test(text);
+    const isHealthIntent = routerFlowState.type !== 'idle' || /蓄电池|电池平衡|姿轨控|健康评估|健康诊断|健康度|健康管理|遥测健康|星载路由系统|路由系统|路由.*状态|分系统状态|卫星.*健康|星座.*报告|整体状态|状态报告/i.test(text);
 
     if (isHealthIntent) {
       handleHealthCheckFlow(text);
@@ -3084,6 +3322,14 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
 
     if (isConstellationPositionIntent) {
       handleConstellationPositionsFlow(text);
+      return;
+    }
+
+    // 识别之江实验室未来过境卫星查询意图
+    const isZhijiangOverpassIntent = /之江.*(?:经过|过境|卫星)|(?:经过|过境).*之江|未来24小时.*(?:之江|卫星.*经过|过境)/i.test(text);
+
+    if (isZhijiangOverpassIntent) {
+      handleZhijiangOverpassFlow(text);
       return;
     }
 
@@ -3153,7 +3399,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
           <button
             key={p}
             type="button"
-            onClick={() => setPrefillPrompt(p)}
+            onClick={() => handleSendMessage(p)}
             className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/40 transition-all cursor-pointer shadow-2xs"
           >
             {p}
@@ -3183,7 +3429,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         )}
       </div>
       <div className="shrink-0 pt-1 pb-3 px-2 sm:px-4 w-full relative">
-        {showScrollToBottom && (
+        {messages.length > 0 && showScrollToBottom && (
           <div className="absolute -top-10 left-0 right-0 flex justify-center pointer-events-none z-20">
             <button
               onClick={() => scrollToBottom(true)}
@@ -3259,7 +3505,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         </div>
 
         <div className="shrink-0 pt-1 pb-3 w-full px-3 sm:px-6 relative">
-          {showScrollToBottom && (
+          {messages.length > 0 && showScrollToBottom && (
             <div className="absolute -top-10 left-0 right-0 flex justify-center pointer-events-none z-20">
               <button
                 id="btn-scroll-to-recent"

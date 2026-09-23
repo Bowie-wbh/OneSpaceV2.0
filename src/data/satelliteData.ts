@@ -206,7 +206,7 @@ export const INITIAL_HISTORY_SESSIONS: HistorySession[] = [
     title: '安排明天下午宁波港口观测任务',
     timestamp: '09:29',
     dateGroup: '今日',
-    messageCount: 8,
+    messageCount: 12,
     type: 'task-planning',
     hasResultBadge: true,
   },

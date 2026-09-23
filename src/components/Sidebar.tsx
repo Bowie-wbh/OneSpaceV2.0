@@ -7,7 +7,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   MessageSquare,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { MainTabType, ThemeMode, HistorySession } from '../types';
 
@@ -195,12 +196,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between px-1">
             {/* 头像和用户名 */}
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0">
-                OS
+              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.08] border border-slate-200/80 dark:border-white/[0.12] flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-2xs flex-shrink-0">
+                <User className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
-                  指控令员 01
+                  长管·李明
                 </p>
                 <p className="text-xs text-slate-400 dark:text-slate-400 truncate">
                   OneSpace 指控中枢
