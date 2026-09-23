@@ -555,14 +555,11 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
                   });
                 }
                 const currentHeight = viewer.camera.positionCartographic.height;
-                // 若地球当前处于远景太空视角（高度大于 45000 米），以正射垂直视角直接拉近放大
+                // 若地球当前处于远景太空视角（高度大于 45000 米），以正射垂直视角直接拉近放大（默认不自动打开思维导图）
                 if (currentHeight > 45000) {
-                  flyToPointRef.current(point, () => {
-                    // 拉近到位放大后，从小圆点自然延伸出思维导图
-                    onToggleMindMapRef.current(true);
-                  });
+                  flyToPointRef.current(point);
                 } else {
-                  // 地球放大后：点击同一个选中的点位且导图已展开时收起；否则展开
+                  // 地球放大后：点击选中的点位可在展开/收起思维导图之间切换
                   if (selectedPointIdRef.current === point.id && isMindMapOpenRef.current) {
                     onToggleMindMapRef.current(false);
                   } else {

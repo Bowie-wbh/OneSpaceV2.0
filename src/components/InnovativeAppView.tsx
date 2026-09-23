@@ -931,7 +931,7 @@ function TimeSelectDropdown({
       >
         <span className="flex items-center gap-1.5 2xl:gap-2 min-w-0">
           <Calendar className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />
-          <span className="truncate font-semibold text-slate-200 font-mono">{selectedItem?.label}</span>
+          <span className="truncate font-semibold text-slate-200">{selectedItem?.label}</span>
         </span>
         <ChevronDown className={`w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -949,7 +949,7 @@ function TimeSelectDropdown({
                 onSelect(t.id);
                 setOpen(false);
               }}
-              className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 text-left text-[11px] 2xl:text-xs font-semibold font-mono transition-colors cursor-pointer ${
+              className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 text-left text-[11px] 2xl:text-xs font-semibold transition-colors cursor-pointer ${
                 t.id === selectedId ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-white/10'
               }`}
             >
@@ -1616,83 +1616,15 @@ function MonitorCard({
                   >
                     <div className="space-y-1.5 2xl:space-y-2">
                       {/* 当前任务概览卡片 */}
-                      <div className="p-2 2xl:p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 space-y-1">
+                      <div className="p-2 2xl:p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20">
                         <div className="flex items-center justify-between gap-1.5">
                           <div className="flex items-center gap-1.5">
                             <span className={`w-1.5 h-1.5 rounded-full ${simStep === 2 ? 'bg-sky-400 animate-ping' : simStep > 2 ? 'bg-emerald-400' : 'bg-slate-400'}`} />
                             <span className="text-[10px] 2xl:text-[11px] font-bold text-sky-200">当前任务</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className={progressStageBadgeClass(simStep < 2 ? 0 : simOnboardIndex, PROGRESS_ONBOARD_STEPS.length)}>
-                              {progressStageLabel(simStep < 2 ? 0 : simOnboardIndex, PROGRESS_ONBOARD_STEPS.length)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                startCurrentTaskSimulation();
-                              }}
-                              className="p-1 rounded-md bg-white/10 hover:bg-white/20 text-sky-300 hover:text-white transition-colors cursor-pointer"
-                              title="重新模拟过程"
-                            >
-                              <RotateCw className={`w-3 h-3 ${isSimulating ? 'animate-spin' : ''}`} />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="text-[10px] 2xl:text-[11px] text-slate-200 font-semibold truncate">
-                          {locations[0]?.name || '俄勒冈/爱达荷边界'} · 应急红外火情巡查
-                        </div>
-                      </div>
-
-                      {/* 逐条展示当前任务进度的过程 */}
-                      <div className="space-y-1">
-                        <div className="text-[9px] 2xl:text-[10px] text-slate-400 font-medium px-0.5 flex items-center justify-between">
-                          <span>
-                            任务执行流程 ({Math.min(Math.max(0, simStep < 2 ? 0 : simOnboardIndex), PROGRESS_ONBOARD_STEPS.length)}/{PROGRESS_ONBOARD_STEPS.length})
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-sky-500/15 text-sky-400 border border-sky-500/20">
+                            {Math.min(100, Math.max(0, Math.round(((simStep < 2 ? 0 : simOnboardIndex) / PROGRESS_ONBOARD_STEPS.length) * 100)))}%
                           </span>
-                          <span className="text-sky-300 font-mono">
-                            {Math.round((Math.min(Math.max(0, simStep < 2 ? 0 : simOnboardIndex), PROGRESS_ONBOARD_STEPS.length) / PROGRESS_ONBOARD_STEPS.length) * 100)}%
-                          </span>
-                        </div>
-                        <div className="max-h-52 overflow-y-auto custom-scrollbar space-y-1 pr-0.5">
-                          {PROGRESS_ONBOARD_STEPS.map((stepName, stepIdx) => {
-                            const isDone = simStep > 2 || (simStep === 2 && simOnboardIndex > stepIdx);
-                            const isCurrent = simStep === 2 && simOnboardIndex === stepIdx;
-                            return (
-                              <div
-                                key={stepName}
-                                className={`flex items-center justify-between gap-2 px-2 py-1 rounded-md border text-[9px] 2xl:text-[10px] transition-all duration-200 ${
-                                  isDone
-                                    ? 'bg-white/[0.03] border-white/[0.06] text-slate-300'
-                                    : isCurrent
-                                    ? 'bg-sky-500/15 border-sky-400/40 text-sky-200 shadow-[0_0_8px_rgba(56,189,248,0.2)]'
-                                    : 'bg-white/[0.01] border-white/[0.03] text-slate-500 opacity-60'
-                                }`}
-                              >
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${
-                                    isDone
-                                      ? 'bg-emerald-500/20 text-emerald-400'
-                                      : isCurrent
-                                      ? 'bg-sky-500/30 text-sky-300 ring-1 ring-sky-400/50'
-                                      : 'bg-white/5 text-slate-500'
-                                  }`}>
-                                    {isDone ? (
-                                      <Check className="w-2.5 h-2.5 stroke-[3]" />
-                                    ) : isCurrent ? (
-                                      <RotateCw className="w-2.5 h-2.5 animate-spin" />
-                                    ) : (
-                                      <span className="text-[8px] font-mono">{stepIdx + 1}</span>
-                                    )}
-                                  </div>
-                                  <span className={`font-medium truncate ${isCurrent ? 'font-bold text-sky-100' : ''}`}>{stepName}</span>
-                                </div>
-                                <span className="font-mono shrink-0 text-[8.5px]">
-                                  {isDone ? '已完成' : isCurrent ? '执行中…' : '待执行'}
-                                </span>
-                              </div>
-                            );
-                          })}
                         </div>
                       </div>
                     </div>
@@ -1751,7 +1683,7 @@ function MonitorCard({
                         <ProgressStepSection index={2} label="卫星自主执行" status="done">
                           <div className="space-y-1.5 2xl:space-y-2">
                             {/* 历史任务概览 */}
-                            <div className="p-2 2xl:p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 space-y-1">
+                            <div className="p-2 2xl:p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20">
                               <div className="flex items-center justify-between gap-1.5">
                                 <div className="flex items-center gap-1.5">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -1760,33 +1692,6 @@ function MonitorCard({
                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
                                   已完成
                                 </span>
-                              </div>
-                              <div className="text-[10px] 2xl:text-[11px] text-slate-200 font-semibold truncate">
-                                {detail.locations[0]?.name || '目标区域'} · 应急红外火情巡查
-                              </div>
-                            </div>
-
-                            {/* 逐条展示执行过程 */}
-                            <div className="space-y-1">
-                              <div className="text-[9px] 2xl:text-[10px] text-slate-400 font-medium px-0.5 flex items-center justify-between">
-                                <span>任务执行全流程 ({PROGRESS_ONBOARD_STEPS.length}/{PROGRESS_ONBOARD_STEPS.length})</span>
-                                <span className="text-emerald-400 font-mono">100%</span>
-                              </div>
-                              <div className="max-h-52 overflow-y-auto custom-scrollbar space-y-1 pr-0.5">
-                                {PROGRESS_ONBOARD_STEPS.map((stepName, stepIdx) => (
-                                  <div
-                                    key={stepName}
-                                    className="flex items-center justify-between gap-2 px-2 py-1 rounded-md bg-white/[0.03] border border-white/[0.06] text-[9px] 2xl:text-[10px]"
-                                  >
-                                    <div className="flex items-center gap-1.5 min-w-0">
-                                      <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                                      </div>
-                                      <span className="text-slate-200 font-medium truncate">{stepName}</span>
-                                    </div>
-                                    <span className="text-slate-400 font-mono shrink-0">已完成</span>
-                                  </div>
-                                ))}
                               </div>
                             </div>
                           </div>
@@ -2911,7 +2816,7 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
   const handleSelectSpatialPoint = (point: SpatialMarkerPoint) => {
     setSelectedSpatialPoint(point);
     setTargetFlyPoint(point);
-    setIsMindMapOpen(true);
+    setIsMindMapOpen(false);
   };
 
   // 3D 思维导图分类点击
@@ -2995,9 +2900,6 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
                       您好，我是OneSpace，可以帮您安排「{selectedApp.title}」任务，您可以跟我说：
                     </h2>
                     <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                      <button type="button" onClick={() => handleSendDashboardMessage('开启林火巡查任务')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
-                        开启林火巡查任务
-                      </button>
                       <button type="button" onClick={() => handleSendDashboardMessage('中断林火巡查任务')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
                         中断林火巡查任务
                       </button>

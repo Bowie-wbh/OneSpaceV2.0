@@ -44,7 +44,6 @@ import {
 
 // 统一对话页打招呼推荐问题（整合任务规划/健康管理/创新应用三类场景）
 const WORKSPACE_SUGGESTED_PROMPTS = [
-  '开启林火巡查任务',
   '安排明天下午宁波港口的观测任务，并检测是否有火灾',
   '现在星座中的卫星都在什么位置',
   '未来24小时内星座有多少卫星可以经过之江实验室',
@@ -964,7 +963,7 @@ export function App() {
         {
           id: 'hist-fire-user-1',
           role: 'user',
-          content: '开始林火巡查任务',
+          content: '开启林火巡查任务',
           timestamp: '09:40',
           mode: 'time_series',
         },
@@ -2710,7 +2709,14 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       return;
     }
 
-    if (satName === '中断任务' || satName === '开启任务') {
+    if (
+      satName.includes('林火') || 
+      satName.includes('巡查') || 
+      satName.includes('任务') || 
+      satName.includes('进度') ||
+      satName === '中断任务' || 
+      satName === '开启任务'
+    ) {
       // 林火监测「进度同步」推荐的快捷操作：复用创新应用状态机，走中断/开启对话流
       setMessages(prev => prev.map(m => (m.id === messageId ? { ...m, isActionConfirmed: true } : m)));
       handleInnovativeTaskFlow(satName);
@@ -3226,7 +3232,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         setTimeout(() => {
           streamAssistantResponse({
             messageId: asstMsgId,
-            content: '当前并无任务',
+            content: '当前并无任务。',
             mode: 'time_series',
           });
         }, 200);
@@ -3242,7 +3248,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
           messageId: asstMsgId,
           content: `当前任务正在进行中，周期：**${selectedInnovativeApp.startDate} ~ ${selectedInnovativeApp.endDate}**（已执行 ${executedDays}/${selectedInnovativeApp.totalDays} 天）。`,
           mode: 'time_series',
-          quickReplyOptions: ['中断任务', '开启任务'],
         });
       }, 200);
     } else {
@@ -3251,7 +3256,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
           messageId: asstMsgId,
           content: '当前并无任务。',
           mode: 'time_series',
-          quickReplyOptions: ['开启任务'],
         });
       }, 200);
     }
