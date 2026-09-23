@@ -1189,6 +1189,77 @@ export function App() {
     }, 200);
   };
 
+  // =========================================================================
+  // 核心业务流程：星座卫星实时位置查询（智能解算并呈现全星座 16 颗卫星实时星下点位置与速度）
+  // =========================================================================
+  const handleConstellationPositionsFlow = (userText: string) => {
+    const userMsgId = 'msg-' + Date.now();
+    const asstMsgId = 'msg-' + (Date.now() + 1);
+
+    const newUserMsg: ChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      content: userText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      mode: 'qa',
+    };
+
+    setMessages(prev => [...prev, newUserMsg]);
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const beijingTimeStr = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+
+    const SATELLITE_REALTIME_POSITIONS = [
+      { id: 1, name: 'SCS-01-01', subPoint: '43.0°N, 67.8°W', location: '北美洲', altitude: '489 km', velocity: '7.64 km/s' },
+      { id: 2, name: 'SCS-01-02', subPoint: '44.6°N, 68.2°W', location: '北美洲', altitude: '490 km', velocity: '7.64 km/s' },
+      { id: 3, name: 'SCS-01-03', subPoint: '40.6°N, 67.3°W', location: '北美洲', altitude: '504 km', velocity: '7.62 km/s' },
+      { id: 4, name: 'SCS-01-04', subPoint: '79.3°N, 100.5°W', location: '北极地区', altitude: '500 km', velocity: '7.62 km/s' },
+      { id: 5, name: 'SCS-01-05', subPoint: '58.0°N, 72.6°W', location: '北美洲', altitude: '513 km', velocity: '7.61 km/s' },
+      { id: 6, name: 'SCS-01-06', subPoint: '63.8°N, 76.1°W', location: '北美洲', altitude: '513 km', velocity: '7.61 km/s' },
+      { id: 7, name: 'SCS-01-07', subPoint: '54.5°N, 64.0°W', location: '北美洲', altitude: '445 km', velocity: '7.65 km/s' },
+      { id: 8, name: 'SCS-01-08', subPoint: '51.5°N, 70.3°W', location: '北美洲', altitude: '510 km', velocity: '7.62 km/s' },
+      { id: 9, name: 'SCS-01-09', subPoint: '82.6°S, 25.4°E', location: '南极地区', altitude: '518 km', velocity: '7.61 km/s' },
+      { id: 10, name: 'SCS-01-10', subPoint: '59.7°N, 137.2°E', location: '亚洲', altitude: '493 km', velocity: '7.62 km/s' },
+      { id: 11, name: 'SCS-01-11', subPoint: '58.6°N, 66.8°W', location: '北美洲', altitude: '456 km', velocity: '7.64 km/s' },
+      { id: 12, name: 'SCS-01-12', subPoint: '23.5°N, 126.7°E', location: '中国', altitude: '495 km', velocity: '7.62 km/s' },
+      { id: 13, name: 'SCS-02-13', subPoint: '34.2°N, 108.9°E', location: '中国', altitude: '502 km', velocity: '7.62 km/s' },
+      { id: 14, name: 'SCS-03-14', subPoint: '12.8°S, 45.3°E', location: '印度洋', altitude: '508 km', velocity: '7.61 km/s' },
+      { id: 15, name: 'SCS-04-15', subPoint: '31.2°N, 121.5°E', location: '中国', altitude: '505 km', velocity: '7.62 km/s' },
+      { id: 16, name: 'SCS-04-16', subPoint: '28.2°N, 112.9°E', location: '中国', altitude: '498 km', velocity: '7.63 km/s' },
+    ];
+
+    const thinking = `1. 用户意图识别：查询在轨星座 16 颗卫星的实时空间轨道位置与星下点分布。
+2. 动力学瞬时星历解算：
+   - 提取全星座两行根数 (TLE) 并执行 SGP4 实时轨道动力学外推。
+   - 解算出当前北京时间（${beijingTimeStr}）的星下点地理坐标（经纬度）、对应地理大区、轨道地心距高程与瞬时轨道运行线速度。
+3. 格式化输出：生成清晰规范的 16 颗卫星实时分布数据列表。`;
+
+    const tableRows = SATELLITE_REALTIME_POSITIONS.map(
+      s => `| ${s.id} | ${s.name} | ${s.subPoint} | ${s.location} | ${s.altitude} | ${s.velocity} |`
+    ).join('\n');
+
+    const content = `当前（北京时间：${beijingTimeStr}）16颗卫星的实时位置如下：
+
+| # | 卫星 | 星下点 | 大致位置 | 高度 | 速度 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+${tableRows}`;
+
+    setTimeout(() => {
+      streamAssistantResponse({
+        messageId: asstMsgId,
+        thinking,
+        content,
+        mode: 'qa',
+      });
+    }, 200);
+  };
+
   // 从问答卡片中直接发起该方案的任务规划
   const handleStartPlanFromQA = (location: string, option?: QAWindowOption) => {
     const promptText = option 
@@ -3005,6 +3076,14 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     if (pendingReviewMsg) {
       // 正在等待确认任务要素清单，用户直接输入文字确认并继续
       handleConfirmRequirementsReady(pendingReviewMsg.id);
+      return;
+    }
+
+    // 识别星座卫星实时位置查询意图
+    const isConstellationPositionIntent = /现在.*星座.*卫星.*位置|星座.*卫星.*位置|卫星.*在什么位置|卫星.*实时位置|卫星.*都在什么位置|16颗卫星.*位置|现在.*卫星.*位置|星座.*卫星.*分布|卫星.*当前位置/i.test(text);
+
+    if (isConstellationPositionIntent) {
+      handleConstellationPositionsFlow(text);
       return;
     }
 

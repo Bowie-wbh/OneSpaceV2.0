@@ -875,6 +875,97 @@ function LocationSearch({
   );
 }
 
+// ── 侧边栏任务进度时间筛选下拉框（支持 Portal 避免被外层容器 overflow 裁切）──
+function TimeSelectDropdown({
+  options,
+  selectedId,
+  onSelect,
+}: {
+  options: { id: string; label: string; isPast: boolean; day: number }[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedItem = options.find((t) => t.id === selectedId) ?? options[0];
+
+  const updateCoords = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+  };
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updateCoords();
+    const handle = () => updateCoords();
+    window.addEventListener('scroll', handle, true);
+    window.addEventListener('resize', handle);
+    return () => {
+      window.removeEventListener('scroll', handle, true);
+      window.removeEventListener('resize', handle);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        onClick={() => {
+          updateCoords();
+          setOpen((v) => !v);
+        }}
+        className="w-full flex items-center justify-between gap-1.5 2xl:gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 rounded-xl bg-white/5 border border-white/10 hover:border-sky-400/50 transition-all cursor-pointer text-[11px] 2xl:text-xs"
+      >
+        <span className="flex items-center gap-1.5 2xl:gap-2 min-w-0">
+          <Calendar className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />
+          <span className="truncate font-semibold text-slate-200 font-mono">{selectedItem?.label}</span>
+        </span>
+        <ChevronDown className={`w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && coords && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width }}
+          className="rounded-xl bg-[#0c101c]/95 border border-white/15 shadow-2xl overflow-hidden max-h-48 overflow-y-auto backdrop-blur-2xl z-[1000] animate-fadeIn divide-y divide-white/[0.06]"
+        >
+          {options.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => {
+                onSelect(t.id);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 text-left text-[11px] 2xl:text-xs font-semibold font-mono transition-colors cursor-pointer ${
+                t.id === selectedId ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-white/10'
+              }`}
+            >
+              <span className="truncate">{t.label}</span>
+              <span className="text-[9px] 2xl:text-[10px] text-slate-500 shrink-0">
+                {!t.isPast ? '当前' : `第${t.day}天`}
+              </span>
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 // ── 执行周期筛选下拉框 ───────────────────────────────────────────────────────
 interface PeriodOption {
   value: string;
@@ -1400,37 +1491,11 @@ function MonitorCard({
               onToggle={() => setTaskOpen((v) => !v)}
             >
               {/* 时间筛选：支持按具体时间点（如 2026/9/2 1:19:45）直接筛选 */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsTimeOpen((v) => !v)}
-                  className="w-full flex items-center justify-between gap-1.5 2xl:gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 rounded-xl bg-white/5 border border-white/10 hover:border-sky-400/50 transition-all cursor-pointer text-[11px] 2xl:text-xs"
-                >
-                  <span className="flex items-center gap-1.5 2xl:gap-2 min-w-0">
-                    <Calendar className="w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-sky-400 shrink-0" />
-                    <span className="truncate font-semibold text-slate-200 font-mono">{selectedTime.label}</span>
-                  </span>
-                  <ChevronDown className={`w-3 h-3 2xl:w-3.5 2xl:h-3.5 text-slate-400 shrink-0 transition-transform ${isTimeOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isTimeOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-[#0c101c]/95 border border-white/15 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto backdrop-blur-2xl">
-                    {timeOptions.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => { setSelectedTimeId(t.id); setIsTimeOpen(false); }}
-                        className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 2xl:px-3 2xl:py-2 text-left text-[11px] 2xl:text-xs font-semibold font-mono transition-colors cursor-pointer ${
-                          t.id === selectedTimeId ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-white/10'
-                        }`}
-                      >
-                        <span className="truncate">{t.label}</span>
-                        <span className="text-[9px] 2xl:text-[10px] text-slate-500 shrink-0">
-                          {!t.isPast ? '当前' : `第${t.day}天`}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <TimeSelectDropdown
+                options={timeOptions}
+                selectedId={selectedTimeId}
+                onSelect={(id) => setSelectedTimeId(id)}
+              />
 
               {(isPastTime || isRunning) ? (
                 <div className="space-y-1.5 2xl:space-y-2">

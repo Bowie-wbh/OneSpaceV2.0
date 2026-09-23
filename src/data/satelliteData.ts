@@ -202,14 +202,6 @@ export const INITIAL_HISTORY_SESSIONS: HistorySession[] = [
     hasResultBadge: true,
   },
   {
-    id: 'sess-fire-1',
-    title: '全球火险监测任务巡查记录',
-    timestamp: '09:40',
-    dateGroup: '今日',
-    messageCount: 6,
-    type: 'innovative',
-  },
-  {
     id: 'sess-ningbo-1',
     title: '安排明天下午宁波港口观测任务',
     timestamp: '09:29',
