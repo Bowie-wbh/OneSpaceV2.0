@@ -408,8 +408,8 @@ export const locations: Location[] = [
 
 export const stats = {
   monitoringDays: 847,
-  completedTasks: 15,
+  completedTasks: 16,
   capturedRegions: locations.length,
-  totalPhotos: 15,
+  totalPhotos: 16,
   firePoints: locations.filter((l) => l.status === "fire").length,
 };

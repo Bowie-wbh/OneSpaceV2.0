@@ -1129,7 +1129,7 @@ interface MonitorCardProps {
 function MonitorCard({
   title,
   status,
-  completedTasks = 15,
+  completedTasks = 16,
   capturedRegions,
   totalPhotos,
   firePoints,
@@ -2190,7 +2190,7 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
   const [dashboardMessages, setDashboardMessages] = useState<DashboardChatMessage[]>([]);
   // 看板顶部统计数字，随任务进度同步联动增长（数字变化时通过 AnimatedNumber 滚动过渡）
   const [dashboardStats, setDashboardStats] = useState({
-    completedTasks: stats.completedTasks ?? 15,
+    completedTasks: stats.completedTasks ?? 16,
     capturedRegions: stats.capturedRegions,
     totalPhotos: stats.totalPhotos,
     firePoints: stats.firePoints,
@@ -2986,38 +2986,55 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
         {/* 看板区（split / kanban 视图下展示） */}
         {showKanban && (
           <div id="innovative-app-dashboard" className="flex-1 h-full min-h-0 flex flex-col animate-fadeIn text-left select-none relative overflow-hidden rounded-2xl border border-slate-200/90 dark:border-white/[0.08] bg-slate-950 shadow-lg">
-        {/* 1.6 看板左上角总体数据卡（两张独立卡片：去掉图标、字号更大、系统统一字体、玻璃质感与科技感） */}
-        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex items-center gap-2 sm:gap-3 pointer-events-auto">
+        {/* 1.6 看板左上角总体数据卡（三张独立卡片：在轨卫星、整体算力、传感器，宽度紧凑精致） */}
+        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
           {/* 卡片 1：在轨卫星 */}
-          <div className="relative group overflow-hidden rounded-xl sm:rounded-2xl p-[1px] transition-all duration-300 hover:scale-[1.03] shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_16px_rgba(56,189,248,0.15)]">
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/40 via-cyan-500/20 to-blue-600/30 rounded-xl sm:rounded-2xl group-hover:from-sky-400/60 group-hover:via-cyan-400/35 group-hover:to-blue-500/50 transition-colors" />
-            <div className="relative min-w-[124px] sm:min-w-[140px] px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-[11px] sm:rounded-[15px] bg-slate-950/35 backdrop-blur-md border border-white/10 text-left select-none">
+          <div className="relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 hover:scale-[1.03] shadow-[0_8px_24px_rgba(0,0,0,0.3),0_0_12px_rgba(56,189,248,0.15)]">
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/40 via-cyan-500/20 to-blue-600/30 rounded-xl group-hover:from-sky-400/60 group-hover:via-cyan-400/35 group-hover:to-blue-500/50 transition-colors" />
+            <div className="relative min-w-[78px] sm:min-w-[88px] px-2 sm:px-2.5 py-1.5 rounded-[11px] bg-slate-950/35 backdrop-blur-md border border-white/10 text-left select-none">
               <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
-              <div className="text-xs sm:text-sm font-semibold text-slate-200/90 leading-none mb-1.5">
+              <div className="text-[11px] sm:text-xs font-semibold text-slate-200/90 leading-none mb-1">
                 在轨卫星
               </div>
-              <div className="flex items-baseline gap-1 leading-none">
-                <span className="font-bold text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-sky-100 via-cyan-100 to-white drop-shadow-[0_0_12px_rgba(56,189,248,0.5)]">
+              <div className="flex items-baseline gap-0.5 sm:gap-1 leading-none">
+                <span className="font-bold text-base sm:text-xl text-transparent bg-clip-text bg-gradient-to-r from-sky-100 via-cyan-100 to-white drop-shadow-[0_0_10px_rgba(56,189,248,0.5)] font-mono">
                   16
                 </span>
-                <span className="text-xs sm:text-sm text-sky-200/90 font-medium">颗</span>
+                <span className="text-[10px] sm:text-xs text-sky-200/90 font-medium">颗</span>
               </div>
             </div>
           </div>
 
           {/* 卡片 2：整体算力 */}
-          <div className="relative group overflow-hidden rounded-xl sm:rounded-2xl p-[1px] transition-all duration-300 hover:scale-[1.03] shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_16px_rgba(45,212,191,0.15)]">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/40 via-teal-500/20 to-blue-600/30 rounded-xl sm:rounded-2xl group-hover:from-cyan-400/60 group-hover:via-teal-400/35 group-hover:to-blue-500/50 transition-colors" />
-            <div className="relative min-w-[130px] sm:min-w-[148px] px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-[11px] sm:rounded-[15px] bg-slate-950/35 backdrop-blur-md border border-white/10 text-left select-none">
+          <div className="relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 hover:scale-[1.03] shadow-[0_8px_24px_rgba(0,0,0,0.3),0_0_12px_rgba(45,212,191,0.15)]">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/40 via-teal-500/20 to-blue-600/30 rounded-xl group-hover:from-cyan-400/60 group-hover:via-teal-400/35 group-hover:to-blue-500/50 transition-colors" />
+            <div className="relative min-w-[88px] sm:min-w-[98px] px-2 sm:px-2.5 py-1.5 rounded-[11px] bg-slate-950/35 backdrop-blur-md border border-white/10 text-left select-none">
               <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent" />
-              <div className="text-xs sm:text-sm font-semibold text-slate-200/90 leading-none mb-1.5">
+              <div className="text-[11px] sm:text-xs font-semibold text-slate-200/90 leading-none mb-1">
                 整体算力
               </div>
-              <div className="flex items-baseline gap-1 leading-none">
-                <span className="font-bold text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 via-teal-100 to-white drop-shadow-[0_0_12px_rgba(45,212,191,0.5)]">
+              <div className="flex items-baseline gap-0.5 sm:gap-1 leading-none">
+                <span className="font-bold text-base sm:text-xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 via-teal-100 to-white drop-shadow-[0_0_10px_rgba(45,212,191,0.5)] font-mono">
                   5.8
                 </span>
-                <span className="text-xs sm:text-sm text-cyan-200/90 font-medium tracking-tight">POPS</span>
+                <span className="text-[10px] sm:text-xs text-cyan-200/90 font-medium tracking-tight">POPS</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 卡片 3：传感器 */}
+          <div className="relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 hover:scale-[1.03] shadow-[0_8px_24px_rgba(0,0,0,0.3),0_0_12px_rgba(168,85,247,0.15)]">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/40 via-indigo-500/20 to-blue-600/30 rounded-xl group-hover:from-purple-400/60 group-hover:via-indigo-400/35 group-hover:to-blue-500/50 transition-colors" />
+            <div className="relative min-w-[78px] sm:min-w-[88px] px-2 sm:px-2.5 py-1.5 rounded-[11px] bg-slate-950/35 backdrop-blur-md border border-white/10 text-left select-none">
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-purple-400/70 to-transparent" />
+              <div className="text-[11px] sm:text-xs font-semibold text-slate-200/90 leading-none mb-1">
+                传感器
+              </div>
+              <div className="flex items-baseline gap-0.5 sm:gap-1 leading-none">
+                <span className="font-bold text-base sm:text-xl text-transparent bg-clip-text bg-gradient-to-r from-purple-100 via-indigo-100 to-white drop-shadow-[0_0_10px_rgba(168,85,247,0.5)] font-mono">
+                  4
+                </span>
+                <span className="text-[10px] sm:text-xs text-purple-200/90 font-medium">种</span>
               </div>
             </div>
           </div>

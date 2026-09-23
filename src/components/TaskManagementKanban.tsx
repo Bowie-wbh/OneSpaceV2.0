@@ -23,6 +23,9 @@ import {
 import { Satellite, FlowStepItem } from '../types';
 import { FlowStepsTimeline } from './FlowStepsTimeline';
 import fireLwirPreviewImg from '../assets/3D_1788272998_LWIR_full_preview.jpg';
+import imgL1A from '../assets/L1A.png';
+import imgL4T from '../assets/L4-T.png';
+import imgL4S from '../assets/L4-S.png';
 
 export interface PlannedTaskItem {
   id: string;
@@ -97,15 +100,9 @@ const RESULT_TABS: ResultTabConfig[] = [
     images: [
       {
         id: 'l1a-img-1',
-        url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=80',
-        title: 'L1A 双波段空间配准影像（波段1: 可见光全色/多光谱）',
-        description: '可见光通道亚像素级几何纠正与空间重采样，清晰呈现地物纹理与山水轮廓',
-      },
-      {
-        id: 'l1a-img-2',
-        url: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1600&q=80',
-        title: 'L1A 双波段空间配准影像（波段2: 短波红外SWIR）',
-        description: '短波红外通道空间几何纠正与配准重叠区特征比对，消除波段间空间几何畸变',
+        url: imgL1A,
+        title: 'L1A 双波段空间配准影像',
+        description: '双波段空间几何纠正与空间配准，清晰呈现地物特征与反演轮廓',
       }
     ]
   },
@@ -115,10 +112,9 @@ const RESULT_TABS: ResultTabConfig[] = [
     images: [
       {
         id: 'l4-trad-1',
-        url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1600&q=80',
-        title: 'L4 传统亮度温差自适应双阈值火点提取成果',
+        url: imgL4T,
+        title: 'L4 传统算法火点检测成果',
         description: '基于中长波红外辐射传输物理反演算法与上下文自适应阈值提取的高温热异常判定图',
-        filterClass: 'hue-rotate-180 saturate-150',
       }
     ]
   },
@@ -128,16 +124,9 @@ const RESULT_TABS: ResultTabConfig[] = [
     images: [
       {
         id: 'l4-ai-1',
-        url: fireLwirPreviewImg,
-        title: 'L4 星载深度学习多尺度热红外火点识别',
-        description: '星载神经网络对长波红外影像进行热点特征提取，精准识别活跃火线与微弱烟羽阴燃区',
-      },
-      {
-        id: 'l4-ai-2',
-        url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1600&q=80',
-        title: 'L4 深度学习火场蔓延边界与置信度热图',
-        description: '多源注意力机制加权的火势蔓延趋势预测与高温置信度火线定位图层',
-        filterClass: 'hue-rotate-[300deg] saturate-200',
+        url: imgL4S,
+        title: 'L4 星载深度学习火点检测成果',
+        description: '星载神经网络对长波红外影像进行热点特征提取，精准识别活跃火线与火场热斑',
       }
     ]
   },
