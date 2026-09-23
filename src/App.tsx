@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as satellite from 'satellite.js';
 import { ArrowDown, GripVertical, Bot } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
@@ -45,8 +45,11 @@ import {
 // 统一对话页打招呼推荐问题（整合任务规划/健康管理/创新应用三类场景）
 const WORKSPACE_SUGGESTED_PROMPTS = [
   '开启林火巡查任务',
-  '帮我评估一下星载路由系统最近十天的状态',
   '安排明天下午宁波港口的观测任务，并检测是否有火灾',
+  '现在星座中的卫星都在什么位置',
+  '未来24小时内星座有多少卫星可以经过之江实验室',
+  '生成过去十天星座整星状态报告',
+  '生成过去十天蓄电池平衡分析报告',
 ];
 
 // 一轨成像/常规成像任务的结束判定：模拟成功/失败结果及失败原因，供任务动画结束后向对话流反馈
@@ -56,6 +59,9 @@ const TASK_FAILURE_REASONS = [
   '星上存储器写入异常，成像数据落盘失败',
   '下传链路信噪比骤降，数据传输中断',
 ];
+
+// 任务与指令单标准模板内容（在“任务包组装与发送”环节发送）
+const TASK_AND_COMMAND_ORDER_MESSAGE = `已生成任务和指令单。\n\n任务单：\n{ "validity_period": [ "2026-09-22 07:15:49", "2026-09-25 07:15:49" ], "location_diameter": 3, "observation_mode": "single", "resolution": "default", "sensor_type": "optical", "location_type": "point", "admin_region": [ "俄罗斯", "萨哈共和国 (Sakha Rep.)" ], "task_priority": 5, "time_priority": 5, "task_mode": "imaging_compute", "intent_type": "control", "quality_priority": 3, "location": "俄罗斯萨哈共和国 (Sakha Rep.)" }\n{ "task_mode": "imaging_compute", "intent_type": "control", "action": "run_algorithm", "_source": "CAPABILITY_BYPASS", "algorithm_id": "fire_detection" }\n\n指令单：\n00FEABCD010201002C0001010004030300000102A5CC6807EC6D580000000001F40CA67BCF0CA7DA5A00015F05000201006AB1F2B802003101869F031A00AA40D9A612D0340A74378AD4DB000038EB377103E70EE2DB2937930041060C0A432AF05859DE45AB00037E52880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000035`;
 
 const decideTaskOutcome = (_totalSteps: number): { outcome: 'success' | 'failure'; failStepIndex?: number; failureReason?: string } => {
   return { outcome: 'success' };
@@ -496,8 +502,102 @@ export function App() {
     setSelectedSessionId(newId);
   };
 
+  const replayTimersRef = useRef<NodeJS.Timeout[]>([]);
+
+  const clearReplayTimers = () => {
+    replayTimersRef.current.forEach(t => clearTimeout(t));
+    replayTimersRef.current = [];
+  };
+
+  const SINGLE_ORBIT_HIST_MESSAGES = useMemo(() => {
+    return {
+      notify: {
+        id: 'hist-notify-1',
+        role: 'assistant' as const,
+        content: '【一轨即时模式提醒】检测到“云尖沐曦号 (SCS-04-15)”卫星即将入境测控站覆盖区，星地高速直通测控链路已建链成功，星载AI模型已启动就绪，当前处于指令上注黄金窗口期（60s）。',
+        timestamp: '10:24',
+        mode: 'single_orbit' as const,
+      },
+      user: {
+        id: 'hist-user-1',
+        role: 'user' as const,
+        content: '请立即检测当前位置是否有火灾',
+        timestamp: '10:24',
+        mode: 'single_orbit' as const,
+      },
+      ack: {
+        id: 'hist-asst-1-ack',
+        role: 'assistant' as const,
+        content: '检测到“云尖沐曦号”处于任务执行窗口期，发起一轨成像任务，任务进度请到任务看板区查看。',
+        timestamp: '10:24',
+        mode: 'single_orbit' as const,
+        showGoToTaskButton: true,
+      },
+      order: {
+        id: 'hist-asst-1-order',
+        role: 'assistant' as const,
+        content: TASK_AND_COMMAND_ORDER_MESSAGE,
+        timestamp: '10:24',
+        mode: 'single_orbit' as const,
+      },
+      done: {
+        id: 'hist-asst-1-done',
+        role: 'assistant' as const,
+        content: '当前任务已完成。已完成之江实验室一轨即时应急成像与星上火灾智能检测全流程，详细流程与遥感成果请查看看板区任务详情，支持全流程动画回放。',
+        timestamp: '10:32',
+        mode: 'single_orbit' as const,
+        showGoToTaskButton: true,
+      }
+    };
+  }, []);
+
+  // 启动一轨模式回放的前半段对话（提醒 -> 用户指令 -> 助手响应确认），之后交由看板区开始推进地面大模型解析
+  const startSingleOrbitChatIntro = (speed: number = 1) => {
+    clearReplayTimers();
+    const { notify, user, ack } = SINGLE_ORBIT_HIST_MESSAGES;
+    setMessages([notify]);
+
+    const delay1 = Math.round(1000 / speed);
+    const delay2 = Math.round(2000 / speed);
+
+    const t1 = setTimeout(() => {
+      setMessages(prev => [...prev, user]);
+    }, delay1);
+
+    const t2 = setTimeout(() => {
+      setMessages(prev => [...prev, ack]);
+    }, delay2);
+
+    replayTimersRef.current = [t1, t2];
+  };
+
+  // 看板区推进到“任务包组装与发送”时，对话框发送任务与指令单
+  const sendSingleOrbitOrderMessage = () => {
+    const { order } = SINGLE_ORBIT_HIST_MESSAGES;
+    setMessages(prev => {
+      if (prev.some(m => m.id === order.id)) return prev;
+      return [...prev, order];
+    });
+  };
+
+  // 看板区星上自主执行全部结束且用量/成果展现后，对话框发送任务完成提示
+  const sendSingleOrbitDoneMessage = () => {
+    const { done } = SINGLE_ORBIT_HIST_MESSAGES;
+    setMessages(prev => {
+      if (prev.some(m => m.id === done.id)) return prev;
+      return [...prev, done];
+    });
+  };
+
+  const skipSingleOrbitChatReplay = () => {
+    clearReplayTimers();
+    const { notify, user, ack, order, done } = SINGLE_ORBIT_HIST_MESSAGES;
+    setMessages([notify, user, ack, order, done]);
+  };
+
   // 新建对话
   const handleNewChat = () => {
+    clearReplayTimers();
     setMessages([]);
     setSelectedSessionId(null);
     setPrefillPrompt('');
@@ -507,6 +607,7 @@ export function App() {
 
   // 选择历史会话
   const handleSelectSession = (sessionId: string) => {
+    clearReplayTimers();
     setSelectedSessionId(sessionId);
     const session = historySessions.find(s => s.id === sessionId);
     if (!session) return;
@@ -745,7 +846,7 @@ export function App() {
         satelliteName: '云尖沐曦号',
         satelliteCode: 'SCS-04-15',
         groundStation: '一轨即时成像地面站',
-        timeRange: '2026-09-10 10:24:05 ~ 10:32:20',
+        timeRange: '2026-09-04 10:24:05 ~ 10:32:20',
         isImaging: true,
         imagingTypeDesc: '一轨即时应急成像与火灾检测',
         computingTask: '火灾检测',
@@ -755,24 +856,11 @@ export function App() {
         payload: '红外',
         isLive: false,
         outcome: 'success',
+        npuHours: '0.05h',
+        tokenUsage: { input: '182400tokens', output: '38200tokens' },
+        autoReplay: true,
       });
       setTaskFocusRequestId(id => id + 1);
-      setMessages([
-        {
-          id: 'hist-user-1',
-          role: 'user',
-          content: '拍摄之江实验室一轨即时成像，并进行全自动火灾检测',
-          timestamp: '10:24',
-          mode: 'single_orbit',
-        },
-        {
-          id: 'hist-asst-1',
-          role: 'assistant',
-          content: '当前任务已完成。详细流程与结果请查看看板区任务详情。',
-          timestamp: '10:32',
-          mode: 'single_orbit',
-        }
-      ]);
     } else if (sessionId === 'sess-1-fail') {
       setActiveTab('workspace');
       setWorkspaceViewMode('split');
@@ -1862,9 +1950,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     }, 200);
   };
 
-  // 任务与指令单标准模板内容（在“任务包组装与发送”环节发送）
-  const TASK_AND_COMMAND_ORDER_MESSAGE = `已生成任务和指令单。\n\n任务单：\n{ "validity_period": [ "2026-09-22 07:15:49", "2026-09-25 07:15:49" ], "location_diameter": 3, "observation_mode": "single", "resolution": "default", "sensor_type": "optical", "location_type": "point", "admin_region": [ "俄罗斯", "萨哈共和国 (Sakha Rep.)" ], "task_priority": 5, "time_priority": 5, "task_mode": "imaging_compute", "intent_type": "control", "quality_priority": 3, "location": "俄罗斯萨哈共和国 (Sakha Rep.)" }\n{ "task_mode": "imaging_compute", "intent_type": "control", "action": "run_algorithm", "_source": "CAPABILITY_BYPASS", "algorithm_id": "fire_detection" }\n\n指令单：\n00FEABCD010201002C0001010004030300000102A5CC6807EC6D580000000001F40CA67BCF0CA7DA5A00015F05000201006AB1F2B802003101869F031A00AA40D9A612D0340A74378AD4DB000038EB377103E70EE2DB2937930041060C0A432AF05859DE45AB00037E5288000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000035`;
-
   // 确认任务单后发起常规任务：跳转任务管理看板对应详情页，地面任务规划逐步呈现，星上处理流程默认折叠且直接呈现完成状态
   const launchRegularTask = (order: StructuredTaskOrder, draft: TaskRequirementDraft) => {
     const activeSat = satellites.find(s => s.name === order.satelliteName) || satellites[0];
@@ -2199,7 +2284,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
       return;
     }
 
-    setPrefillPrompt('请监测当前位置是否有火灾');
+    setPrefillPrompt('请立即检测当前位置是否有火灾');
   };
 
   // 将新发起的一轨成像任务注入任务管理看板，并自动切换看板区展示与锁定输入框
@@ -3251,6 +3336,21 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
                         onSelectSatellite={setSelectedSatelliteId}
                         injectedTask={singleOrbitInjectedTask}
                         focusRequestId={taskFocusRequestId}
+                        onReplayTask={(task, speed) => {
+                          if (task.id === 'TASK-SO-HIST-1') {
+                            startSingleOrbitChatIntro(speed);
+                          }
+                        }}
+                        onReplayPhase={(phase) => {
+                          if (phase === 'order') {
+                            sendSingleOrbitOrderMessage();
+                          } else if (phase === 'done') {
+                            sendSingleOrbitDoneMessage();
+                          }
+                        }}
+                        onSkipReplay={() => {
+                          skipSingleOrbitChatReplay();
+                        }}
                       />
                     )}
 

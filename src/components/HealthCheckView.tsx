@@ -891,9 +891,6 @@ export const HealthCheckView: React.FC<HealthCheckViewProps> = ({
                 <button type="button" onClick={() => handleSendMessage('帮我进行最近十天的蓄电池平衡分析')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
                   帮我进行最近十天的蓄电池平衡分析
                 </button>
-                <button type="button" onClick={() => handleSendMessage('帮我评估一下星载路由系统最近十天的状态')} className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-[#111728] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-sky-400 hover:bg-blue-50/50 dark:hover:bg-sky-950/45 transition-all cursor-pointer shadow-2xs">
-                  帮我评估一下星载路由系统最近十天的状态
-                </button>
               </div>
             </div>
           </div>

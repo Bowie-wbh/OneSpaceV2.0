@@ -193,6 +193,15 @@ export const INITIAL_FLOW_STEPS: FlowStepItem[] = REGULAR_FLOW_STEPS;
 
 export const INITIAL_HISTORY_SESSIONS: HistorySession[] = [
   {
+    id: 'sess-1',
+    title: '云尖沐曦号应急一轨即时成像（成功）',
+    timestamp: '10:24',
+    dateGroup: '今日',
+    messageCount: 3,
+    type: 'task-planning',
+    hasResultBadge: true,
+  },
+  {
     id: 'sess-fire-1',
     title: '全球火险监测任务巡查记录',
     timestamp: '09:40',

@@ -188,37 +188,37 @@ const createSatelliteMarkerCanvas = (isSelected = false): string => {
   return canvas.toDataURL();
 };
 
-// 高德全球卫星影像底图与注记服务（国内官方直连、高速稳定且全球覆盖）
-// 国内直连全球高清卫星底图图层构建函数（高德全球卫星遥感底图 style=6）
+// Esri 全球卫星影像底图与注记服务（ArcGIS Online World Imagery & Reference）
+// 全球高清卫星底图图层构建函数（Esri World Imagery）
 const createSatelliteBaseLayer = () => {
   try {
-    const amapProvider = new Cesium.UrlTemplateImageryProvider({
-      url: 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
-      subdomains: ['1', '2', '3', '4'],
-      maximumLevel: 18,
+    const esriProvider = new Cesium.UrlTemplateImageryProvider({
+      url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      maximumLevel: 19,
       tilingScheme: new Cesium.WebMercatorTilingScheme(),
-      credit: '高德全球遥感影像 (AutoNavi)',
+      credit: 'Esri World Imagery',
+      enablePickFeatures: false,
     });
-    return new Cesium.ImageryLayer(amapProvider);
+    return new Cesium.ImageryLayer(esriProvider);
   } catch (err) {
-    console.warn('Failed to initialize AutoNavi ImageryProvider:', err);
+    console.warn('Failed to initialize Esri ImageryProvider:', err);
     return null;
   }
 };
 
-// 国内直连全球中文地名与道路行政区划注记图层构建函数（高德路网与注记 style=8）
+// 全球地名与行政区划注记图层构建函数（Esri World Boundaries and Places）
 const createAnnotationLayer = () => {
   try {
     const annotationProvider = new Cesium.UrlTemplateImageryProvider({
-      url: 'https://webst0{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}',
-      subdomains: ['1', '2', '3', '4'],
-      maximumLevel: 18,
+      url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      maximumLevel: 19,
       tilingScheme: new Cesium.WebMercatorTilingScheme(),
-      credit: '高德全球注记与路网',
+      credit: 'Esri World Boundaries and Places',
+      enablePickFeatures: false,
     });
     return new Cesium.ImageryLayer(annotationProvider);
   } catch (err) {
-    console.warn('Failed to initialize AutoNavi Annotation ImageryProvider:', err);
+    console.warn('Failed to initialize Esri Annotation ImageryProvider:', err);
     return null;
   }
 };

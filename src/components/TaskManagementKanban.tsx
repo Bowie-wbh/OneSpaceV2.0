@@ -13,7 +13,12 @@ import {
   Maximize2,
   X,
   Sparkles,
-  Eye
+  Eye,
+  Play,
+  Pause,
+  RotateCcw,
+  SkipForward,
+  Check
 } from 'lucide-react';
 import { Satellite, FlowStepItem } from '../types';
 import { FlowStepsTimeline } from './FlowStepsTimeline';
@@ -36,6 +41,8 @@ export interface PlannedTaskItem {
   tokenUsage?: { input: string; output: string }; // Token消耗，如 { input: '182400tokens', output: '38200tokens' }
   // 是否为对话流刚发起的实时任务（决定详情页流程是否需要逐步呈现动画）
   isLive?: boolean;
+  // 进入详情页时是否自动触发全流程回放动画
+  autoReplay?: boolean;
   // 实时任务的最终结果：成功 或 失败（未结束/中断前为 undefined）
   outcome?: 'success' | 'failure';
   // 失败原因说明（outcome 为 failure 时展示于对话流）
@@ -53,6 +60,13 @@ const ONBOARD_STAGE_LABELS = [
   '成像数据落盘', '云判', '火灾检测', '模型推理完成', '开始落盘到固存',
   '落盘固存完成', '文件启动下传', '文件下传到地面站', '码流文件解析', '模型结果解析', '任务完成',
 ];
+
+const ALL_STAGE_LABELS = [...GROUND_STAGE_LABELS, ...ONBOARD_STAGE_LABELS];
+
+// 回放倍速选项（包含慢速 0.1x / 0.25x / 0.5x，正常 1x，快速 2x）
+export const REPLAY_SPEED_OPTIONS = [0.1, 0.25, 0.5, 1, 2] as const;
+export type ReplaySpeed = (typeof REPLAY_SPEED_OPTIONS)[number];
+const getReplayInterval = (speed: ReplaySpeed) => Math.round(450 / speed);
 
 // 详情页流程动画节奏（ms/步），供 App.tsx 估算总耗时以在动画结束后发出对话流结果反馈
 export const FLOW_STEP_INTERVAL_MS = 450;
@@ -501,6 +515,12 @@ interface TaskManagementKanbanProps {
   injectedTask?: PlannedTaskItem | null;
   // 每次递增时强制重新跳转到 injectedTask 详情页（用于用户已返回列表后再次点击“查看”）
   focusRequestId?: number;
+  // 触发对话框与全流程同步回放的回调
+  onReplayTask?: (task: PlannedTaskItem, speed?: ReplaySpeed) => void;
+  // 回放阶段通知回调：'order' 为到达任务包组装与发送；'done' 为全部流程播放完成且成果展示就绪
+  onReplayPhase?: (phase: 'order' | 'done') => void;
+  // 跳过回放直接显示全量成果的回调
+  onSkipReplay?: () => void;
 }
 
 export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
@@ -509,6 +529,9 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
   onSelectSatellite,
   injectedTask,
   focusRequestId,
+  onReplayTask,
+  onReplayPhase,
+  onSkipReplay,
 }) => {
   const [filterSatId, setFilterSatId] = useState<string>('all');
   const [selectedTaskDetail, setSelectedTaskDetail] = useState<PlannedTaskItem | null>(null);
@@ -530,7 +553,34 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
   const [groundStepIndex, setGroundStepIndex] = useState(GROUND_STAGE_LABELS.length);
   const [onboardStepIndex, setOnboardStepIndex] = useState(ONBOARD_STAGE_LABELS.length);
 
+  // 回放控制状态（支持历史与实时任务的完整 20 步流程回放）
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [replaySpeed, setReplaySpeed] = useState<ReplaySpeed>(1);
+  const [isSpeedMenuOpen, setIsSpeedMenuOpen] = useState(false);
+  const [replayCurrentStep, setReplayCurrentStep] = useState(0);
+  const replayTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const introTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const speedMenuRef = useRef<HTMLDivElement>(null);
+
   const initialTasks: PlannedTaskItem[] = [
+    {
+      id: 'TASK-SO-HIST-1',
+      satelliteName: '云尖沐曦号',
+      satelliteCode: 'SCS-04-15',
+      groundStation: '一轨即时成像地面站',
+      timeRange: '2026-09-04 10:24:05 ~ 10:32:20',
+      isImaging: true,
+      imagingTypeDesc: '一轨即时应急成像与火灾检测',
+      computingTask: '火灾检测',
+      starMode: '单星',
+      targetLocation: '之江实验室（120.09°E, 30.29°N）',
+      taskMode: '一轨成像',
+      payload: '红外',
+      outcome: 'success',
+      npuHours: '0.05h',
+      tokenUsage: { input: '182400tokens', output: '38200tokens' },
+    },
     {
       id: 'TASK-PL-20260904-01',
       satelliteName: '云尖沐曦号',
@@ -613,18 +663,200 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     },
   ];
 
+  const stopReplayTimer = () => {
+    if (replayTimerRef.current) {
+      clearInterval(replayTimerRef.current);
+      replayTimerRef.current = null;
+    }
+    if (introTimerRef.current) {
+      clearTimeout(introTimerRef.current);
+      introTimerRef.current = null;
+    }
+  };
+
+  const startReplay = (speed: ReplaySpeed = replaySpeed, notifyChat: boolean = false) => {
+    stopReplayTimer();
+    setIsReplaying(true);
+    setIsPaused(false);
+    setReplayCurrentStep(0);
+    setGroundStepIndex(-1);
+    setOnboardStepIndex(-1);
+
+    const isOneOrbitTask = selectedTaskDetail?.id === 'TASK-SO-HIST-1' || (selectedTaskDetail?.taskMode === '一轨成像' && !selectedTaskDetail?.isLive);
+
+    if ((notifyChat || isOneOrbitTask) && selectedTaskDetail && onReplayTask) {
+      onReplayTask(selectedTaskDetail, speed);
+    }
+
+    const interval = getReplayInterval(speed);
+    // 一轨即时模式历史回放：先等对话框前置文字播放完毕（约 2300ms / speed），到达 ack 确认后才启动看板区地面大模型流程
+    const introDelay = isOneOrbitTask ? Math.round(2300 / speed) : 0;
+
+    const startStepping = () => {
+      const totalSteps = GROUND_STAGE_LABELS.length + ONBOARD_STAGE_LABELS.length;
+      let step = 0;
+
+      replayTimerRef.current = setInterval(() => {
+        step += 1;
+        setReplayCurrentStep(step);
+
+        const groundIndex = Math.min(step, GROUND_STAGE_LABELS.length);
+        setGroundStepIndex(groundIndex);
+
+        const onboardStep = step - GROUND_STAGE_LABELS.length;
+        setOnboardStepIndex(onboardStep <= 0 ? -1 : Math.min(onboardStep, ONBOARD_STAGE_LABELS.length));
+
+        // 第 3 步（地面大模型到达“任务包组装与发送”环节，即 GROUND_STAGE_LABELS[2] 已解析并正在组装指令）
+        if (step === 3) {
+          onReplayPhase?.('order');
+        }
+
+        if (step >= totalSteps) {
+          stopReplayTimer();
+          setIsReplaying(false);
+          setIsPaused(false);
+          // 星上流程全部执行完毕，成果与用量均已呈现后，触发对话框发送完成提示
+          introTimerRef.current = setTimeout(() => {
+            onReplayPhase?.('done');
+          }, Math.round(350 / speed));
+        }
+      }, interval);
+    };
+
+    if (introDelay > 0) {
+      introTimerRef.current = setTimeout(() => {
+        startStepping();
+      }, introDelay);
+    } else {
+      startStepping();
+    }
+  };
+
+  const pauseReplay = () => {
+    stopReplayTimer();
+    setIsPaused(true);
+  };
+
+  const resumeReplay = () => {
+    stopReplayTimer();
+    setIsPaused(false);
+    const totalSteps = GROUND_STAGE_LABELS.length + ONBOARD_STAGE_LABELS.length;
+    let step = replayCurrentStep;
+    const interval = getReplayInterval(replaySpeed);
+
+    replayTimerRef.current = setInterval(() => {
+      step += 1;
+      setReplayCurrentStep(step);
+
+      const groundIndex = Math.min(step, GROUND_STAGE_LABELS.length);
+      setGroundStepIndex(groundIndex);
+
+      const onboardStep = step - GROUND_STAGE_LABELS.length;
+      setOnboardStepIndex(onboardStep <= 0 ? -1 : Math.min(onboardStep, ONBOARD_STAGE_LABELS.length));
+
+      if (step === 3) {
+        onReplayPhase?.('order');
+      }
+
+      if (step >= totalSteps) {
+        stopReplayTimer();
+        setIsReplaying(false);
+        setIsPaused(false);
+        introTimerRef.current = setTimeout(() => {
+          onReplayPhase?.('done');
+        }, Math.round(350 / replaySpeed));
+      }
+    }, interval);
+  };
+
+  const changeReplaySpeed = (newSpeed: ReplaySpeed) => {
+    setReplaySpeed(newSpeed);
+    if (isReplaying && !isPaused) {
+      stopReplayTimer();
+      const totalSteps = GROUND_STAGE_LABELS.length + ONBOARD_STAGE_LABELS.length;
+      let step = replayCurrentStep;
+      const interval = getReplayInterval(newSpeed);
+
+      replayTimerRef.current = setInterval(() => {
+        step += 1;
+        setReplayCurrentStep(step);
+
+        const groundIndex = Math.min(step, GROUND_STAGE_LABELS.length);
+        setGroundStepIndex(groundIndex);
+
+        const onboardStep = step - GROUND_STAGE_LABELS.length;
+        setOnboardStepIndex(onboardStep <= 0 ? -1 : Math.min(onboardStep, ONBOARD_STAGE_LABELS.length));
+
+        if (step === 3) {
+          onReplayPhase?.('order');
+        }
+
+        if (step >= totalSteps) {
+          stopReplayTimer();
+          setIsReplaying(false);
+          setIsPaused(false);
+          introTimerRef.current = setTimeout(() => {
+            onReplayPhase?.('done');
+          }, Math.round(350 / newSpeed));
+        }
+      }, interval);
+    }
+  };
+
+  const skipReplayToEnd = () => {
+    stopReplayTimer();
+    setIsReplaying(false);
+    setIsPaused(false);
+    const totalSteps = GROUND_STAGE_LABELS.length + ONBOARD_STAGE_LABELS.length;
+    setReplayCurrentStep(totalSteps);
+    setGroundStepIndex(GROUND_STAGE_LABELS.length);
+    setOnboardStepIndex(ONBOARD_STAGE_LABELS.length);
+    if (onSkipReplay) {
+      onSkipReplay();
+    }
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (speedMenuRef.current && !speedMenuRef.current.contains(e.target as Node)) {
+        setIsSpeedMenuOpen(false);
+      }
+    };
+    if (isSpeedMenuOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isSpeedMenuOpen]);
+
+  useEffect(() => {
+    return () => {
+      stopReplayTimer();
+    };
+  }, []);
+
   // 对话流触发的一轨成像任务：注入到任务列表顶部，并自动跳转到其详情页；
   // focusRequestId 变化时（如用户返回列表后再次点击“查看”）即使任务未变也强制重新跳转
   useEffect(() => {
     if (!injectedTask) return;
     setChatCreatedTasks(prev => (prev.some(t => t.id === injectedTask.id) ? prev : [injectedTask, ...prev]));
-    setSelectedTaskDetail(injectedTask);
+    setSelectedTaskDetail(injectedTask.autoReplay ? { ...injectedTask } : injectedTask);
   }, [injectedTask, focusRequestId]);
 
   // 任务详情页流程逐步呈现：实时发起的一轨成像任务地面+星上均按步骤动画推进；
   // 实时发起的常规模式任务仅地面任务规划逐步呈现，星上处理流程默认折叠并直接呈现完成状态；其余历史任务直接呈现为已完成
   useEffect(() => {
+    stopReplayTimer();
+    setIsReplaying(false);
+    setIsPaused(false);
+
     if (!selectedTaskDetail) return;
+
+    if (selectedTaskDetail.autoReplay) {
+      startReplay(1, true);
+      return;
+    }
 
     const isLiveSingleOrbit = selectedTaskDetail.taskMode === '一轨成像' && selectedTaskDetail.isLive;
     const isLiveRegular = selectedTaskDetail.taskMode === '常规模式' && selectedTaskDetail.isLive;
@@ -1020,16 +1252,162 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     return (
       <div id="task-management-kanban" className="w-full h-full flex flex-col min-h-0 text-left select-none animate-fadeIn overflow-hidden">
         <div className="w-full h-full flex flex-col min-h-0 rounded-2xl bg-white/95 dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/[0.08] shadow-sm backdrop-blur-xl overflow-hidden p-4 sm:p-5 gap-4">
-          <div className="flex items-center gap-3 shrink-0 pb-1 border-b border-slate-100/80 dark:border-white/[0.04]">
-            <button
-              type="button"
-              onClick={() => setSelectedTaskDetail(null)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>返回</span>
-            </button>
-            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-sans">任务规划详情</h4>
+          <div className="flex items-center justify-between gap-3 shrink-0 pb-1 border-b border-slate-100/80 dark:border-white/[0.04]">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  stopReplayTimer();
+                  setIsReplaying(false);
+                  setSelectedTaskDetail(null);
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>返回</span>
+              </button>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 font-sans">任务规划详情</h4>
+            </div>
+
+            {/* 回放全过程控制栏 */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {isReplaying ? (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50/90 dark:bg-sky-950/40 border border-blue-200/80 dark:border-sky-500/30 text-xs shadow-xs animate-fadeIn">
+                  <div className="flex items-center gap-1.5 text-blue-600 dark:text-sky-400 font-bold">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600 dark:bg-sky-400"></span>
+                    </span>
+                    <span>回放中 ({replayCurrentStep}/{ALL_STAGE_LABELS.length})</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-normal hidden sm:inline">
+                      · {ALL_STAGE_LABELS[Math.min(replayCurrentStep > 0 ? replayCurrentStep - 1 : 0, ALL_STAGE_LABELS.length - 1)]}
+                    </span>
+                  </div>
+                  <div className="h-3 w-[1px] bg-blue-200 dark:bg-sky-500/30 mx-0.5" />
+                  {isPaused ? (
+                    <button
+                      type="button"
+                      onClick={resumeReplay}
+                      className="p-1 rounded-md text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:hover:bg-sky-900/50 transition-colors cursor-pointer"
+                      title="继续"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={pauseReplay}
+                      className="p-1 rounded-md text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:hover:bg-sky-900/50 transition-colors cursor-pointer"
+                      title="暂停"
+                    >
+                      <Pause className="w-3.5 h-3.5 fill-current" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => startReplay(replaySpeed, true)}
+                    className="p-1 rounded-md text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:hover:bg-sky-900/50 transition-colors cursor-pointer"
+                    title="重新回放"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* 倍速切换下拉菜单 */}
+                  <div className="relative" ref={speedMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsSpeedMenuOpen(prev => !prev)}
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100/70 dark:bg-sky-900/40 text-blue-600 dark:text-sky-300 hover:bg-blue-200/70 dark:hover:bg-sky-900/80 transition-colors cursor-pointer border border-blue-200/60 dark:border-sky-500/30"
+                      title="切换回放倍速"
+                    >
+                      <span>{replaySpeed}x</span>
+                      <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${isSpeedMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isSpeedMenuOpen && (
+                      <div className="absolute top-full mt-1.5 right-0 z-50 w-24 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-lg backdrop-blur-xl animate-fadeIn">
+                        {REPLAY_SPEED_OPTIONS.map((speed) => (
+                          <button
+                            key={speed}
+                            type="button"
+                            onClick={() => {
+                              changeReplaySpeed(speed);
+                              setIsSpeedMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1 text-left font-mono text-[11px] font-bold transition-colors cursor-pointer ${
+                              replaySpeed === speed
+                                ? 'bg-blue-600 text-white'
+                                : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10'
+                            }`}
+                          >
+                            <span>{speed}x</span>
+                            {replaySpeed === speed && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={skipReplayToEnd}
+                    className="flex items-center gap-0.5 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                    title="跳过回放直接查看完成结果"
+                  >
+                    <SkipForward className="w-3 h-3" />
+                    <span>跳过</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  {/* 未回放时的倍速预设下拉菜单 */}
+                  <div className="relative" ref={speedMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsSpeedMenuOpen(prev => !prev)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/[0.08] text-xs font-mono font-bold transition-colors cursor-pointer"
+                      title="设置回放倍速"
+                    >
+                      <span>{replaySpeed}x</span>
+                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isSpeedMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isSpeedMenuOpen && (
+                      <div className="absolute top-full mt-1.5 right-0 z-50 w-24 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-lg backdrop-blur-xl animate-fadeIn">
+                        {REPLAY_SPEED_OPTIONS.map((speed) => (
+                          <button
+                            key={speed}
+                            type="button"
+                            onClick={() => {
+                              changeReplaySpeed(speed);
+                              setIsSpeedMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1 text-left font-mono text-[11px] font-bold transition-colors cursor-pointer ${
+                              replaySpeed === speed
+                                ? 'bg-blue-600 text-white'
+                                : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10'
+                            }`}
+                          >
+                            <span>{speed}x</span>
+                            {replaySpeed === speed && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => startReplay(replaySpeed, true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-500/20 hover:shadow-md transition-all active:scale-95 cursor-pointer"
+                    title="回放任务全流程执行过程"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>回放全过程</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
 
@@ -1093,20 +1471,20 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
               </div>
               <div className="p-3.5 sm:p-4 space-y-3">
                 <FlowStepsTimeline
-                  key={groundAnimating ? `ground-${groundDone}-${groundErrorIndex}` : 'ground-static'}
+                  key={groundAnimating || isReplaying ? `ground-${groundDone}-${groundErrorIndex}-${groundStepIndex}` : 'ground-static'}
                   steps={toFlowSteps(GROUND_STAGE_LABELS, groundErrorIndex)}
                   currentStepIndex={groundStepIndex}
                   title="地面大模型解析"
                   collapsible
-                  defaultExpanded={groundAnimating ? !groundDone : false}
+                  defaultExpanded={groundAnimating || isReplaying ? !groundDone : true}
                 />
                 <FlowStepsTimeline
-                  key={isLiveOrbit ? `onboard-${onboardStarted}-${onboardDone}-${onboardErrorIndex}` : 'onboard-static'}
+                  key={isLiveOrbit || isReplaying ? `onboard-${onboardStarted}-${onboardDone}-${onboardErrorIndex}-${onboardStepIndex}` : 'onboard-static'}
                   steps={toFlowSteps(ONBOARD_STAGE_LABELS, onboardErrorIndex)}
                   currentStepIndex={onboardStepIndex}
                   title="星上任务自主执行"
                   collapsible
-                  defaultExpanded={isLiveOrbit ? (onboardStarted && !onboardDone) : false}
+                  defaultExpanded={isLiveOrbit || isReplaying ? (onboardStarted && !onboardDone) : true}
                 />
               </div>
             </div>

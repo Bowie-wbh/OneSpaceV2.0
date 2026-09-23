@@ -26,8 +26,7 @@ import {
   ArrowRight,
   ArrowUp,
   ArrowDown,
-  Plus,
-  Flame, 
+  Plus, 
   X, 
   Filter, 
   Search, 
@@ -1397,9 +1396,6 @@ function MonitorCard({
             {/* 模块三：当前任务 —— 当前执行周期 + 进度同步（默认今日，支持按天筛选）；默认展示，无任务/无历史周期时显示空状态，可折叠 */}
             <MonitorSection
               label="任务进度"
-              badge={isRunning && !sync?.cycleFinished ? (
-                <span className="px-1.5 2xl:px-2 py-0.5 rounded-full text-[9px] 2xl:text-[10px] font-bold bg-sky-400/20 text-sky-200 border border-sky-400/40">执行中</span>
-              ) : undefined}
               open={taskOpen}
               onToggle={() => setTaskOpen((v) => !v)}
             >
@@ -2136,8 +2132,6 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
   });
   // 左侧独立浮动的“进度同步”模块状态（与嵌入式对话内容并行展示，展示为流程步骤）
   const [progressSync, setProgressSync] = useState<ProgressSyncState | null>(null);
-  // 看板区上方中间的短暂提示消息（如接收到高风险地点拍摄需求时弹出）
-  const [topToast, setTopToast] = useState<string | null>(null);
   // 每日任务执行完毕时，在地图对应经纬度处短暂闪烁的红点标记
   const [pulseMarkers, setPulseMarkers] = useState<{ lat: number; lng: number }[]>([]);
   const [dashboardInputText, setDashboardInputText] = useState('');
@@ -2452,11 +2446,6 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
       onboardStepIndex: -1,
       receiving: true,
     });
-
-    setTimeout(() => {
-      setTopToast(`接收到 ${customLocations.length} 个高风险地点拍摄需求`);
-      setTimeout(() => setTopToast(null), 3200);
-    }, t);
 
     pushMsg(planningMsgId, { content: '正在生成任务规划……' }, t += 1000);
     setTimeout(() => setProgressSync(prev => (prev ? { ...prev, receiving: false } : prev)), t);
@@ -2932,16 +2921,6 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
         {/* 看板区（split / kanban 视图下展示） */}
         {showKanban && (
           <div id="innovative-app-dashboard" className="flex-1 h-full min-h-0 flex flex-col animate-fadeIn text-left select-none relative overflow-hidden rounded-2xl border border-slate-200/90 dark:border-white/[0.08] bg-slate-950 shadow-lg">
-        {/* 1.5 顶部居中提示：接收到高风险地点拍摄需求时短暂弹出，加强视觉冲击力 */}
-        {topToast && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-            <div className="animate-toast-pop animate-toast-ring flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-sky-500/95 border-2 border-sky-300/70 text-white shadow-[0_0_24px_rgba(56,189,248,0.65)] backdrop-blur-xl text-sm font-bold">
-              <Flame className="w-4 h-4 text-white animate-bounce" />
-              <span>{topToast}</span>
-            </div>
-          </div>
-        )}
-
         {/* 1.6 看板左上角总体数据卡（两张独立卡片：去掉图标、字号更大、系统统一字体、玻璃质感与科技感） */}
         <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex items-center gap-2 sm:gap-3 pointer-events-auto">
           {/* 卡片 1：在轨卫星 */}
@@ -3161,15 +3140,13 @@ export const InnovativeAppView: React.FC<InnovativeAppViewProps> = ({
               className="w-full h-full relative z-0"
             >
               <TileLayer
-                url="https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}"
-                subdomains={['1', '2', '3', '4']}
-                attribution="高德全球卫星影像"
+                url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                attribution="Esri World Imagery"
                 maxZoom={18}
               />
               <TileLayer
-                url="https://webst0{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}"
-                subdomains={['1', '2', '3', '4']}
-                attribution="高德全球注记与路网"
+                url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+                attribution="Esri World Boundaries and Places"
                 maxZoom={18}
                 opacity={0.85}
               />

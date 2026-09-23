@@ -397,32 +397,41 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
     <div
       ref={barContainerRef}
       id="weather-forecast-dashboard-bar"
-      className="absolute bottom-3 sm:bottom-4 left-16 sm:left-20 right-16 sm:right-20 z-40 rounded-2xl bg-black/85 border border-white/15 backdrop-blur-2xl shadow-[0_16px_40px_rgba(0,0,0,0.7)] animate-fadeIn text-white font-sans select-none pointer-events-auto"
+      className="absolute bottom-3 sm:bottom-4 left-3 sm:left-6 md:left-12 lg:left-16 right-3 sm:right-6 md:right-12 lg:right-16 z-40 rounded-2xl bg-slate-950/45 border border-white/15 backdrop-blur-xl shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(56,189,248,0.08)] animate-fadeIn text-white font-sans select-none pointer-events-auto"
     >
-      {/* 顶部控制栏：标题、地区（机场）下拉筛选、日期下拉筛选、指标切换、关闭按钮 */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-white/10 bg-white/[0.04]">
-        {/* 左侧：标题与机场选择 */}
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-300 font-bold text-xs shrink-0 shadow-sm">
-            <CloudSun className="w-4 h-4 text-sky-400" />
-            <span className="hidden sm:inline">在轨短临气象预报</span>
-            <span className="sm:hidden">预报</span>
+      {/* 独立绝对定位的关闭按钮：始终锁死在卡片最右上角，无论内部如何折行绝不溢出或错位 */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer bg-black/30 border border-white/10"
+        title="关闭天气看板"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {/* 顶部控制栏：右侧预留 pr-10 绝不与关闭按钮冲突；小屏或狭窄空间下自动整洁排成两行，宽屏单行展开 */}
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 pl-3 sm:pl-4 pr-11 sm:pr-12 py-2.5 border-b border-white/10 bg-white/[0.04]">
+        {/* 第一组（左侧）：模块标题与地区、日期筛选 */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="text-xs sm:text-sm font-bold text-slate-100 tracking-wide shrink-0">
+            <span className="hidden sm:inline whitespace-nowrap">在轨短临气象预报</span>
+            <span className="sm:hidden whitespace-nowrap">气象预报</span>
           </div>
 
           {/* 地区（机场）下拉筛选 */}
-          <div className="relative" ref={airportDropdownRef}>
+          <div className="relative shrink-0" ref={airportDropdownRef}>
             <button
               type="button"
               onClick={() => {
                 setIsAirportOpen(!isAirportOpen);
                 setIsDateOpen(false);
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 hover:border-sky-400/60 text-xs font-semibold transition-all cursor-pointer text-slate-200"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 hover:border-sky-400/60 text-xs font-semibold transition-all cursor-pointer text-slate-200 shrink-0"
               title="切换机场并定位"
             >
               <Plane className="w-3 h-3 text-sky-400 shrink-0" />
-              <span className="max-w-[130px] sm:max-w-[170px] truncate">{selectedAirport.shortName}</span>
-              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isAirportOpen ? 'rotate-180' : ''}`} />
+              <span className="whitespace-nowrap">{selectedAirport.shortName}</span>
+              <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${isAirportOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isAirportOpen && (
@@ -450,7 +459,7 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
                       >
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-slate-100 font-medium">{airport.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                          <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                             <span>{airport.city}</span>
                             <span>·</span>
                             <span className="text-sky-400/90">{airport.code}</span>
@@ -466,20 +475,20 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
           </div>
 
           {/* 日期筛选（15天） */}
-          <div className="relative" ref={dateDropdownRef}>
+          <div className="relative shrink-0" ref={dateDropdownRef}>
             <button
               type="button"
               onClick={() => {
                 setIsDateOpen(!isDateOpen);
                 setIsAirportOpen(false);
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 hover:border-sky-400/60 text-xs font-semibold transition-all cursor-pointer font-mono text-slate-200"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 hover:border-sky-400/60 text-xs font-semibold transition-all cursor-pointer text-slate-200 shrink-0"
             >
               <Calendar className="w-3 h-3 text-sky-400 shrink-0" />
-              <span className="truncate">
+              <span className="whitespace-nowrap">
                 {futureDays.find((d) => d.dateStr === selectedDate)?.label || selectedDate}
               </span>
-              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isDateOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${isDateOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isDateOpen && (
@@ -494,7 +503,7 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
                         setSelectedDate(d.dateStr);
                         setIsDateOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs font-mono transition-colors cursor-pointer ${
+                      className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs transition-colors cursor-pointer ${
                         isSelected ? 'bg-sky-500/20 text-sky-300 font-bold' : 'text-slate-300 hover:bg-white/10'
                       }`}
                     >
@@ -510,54 +519,58 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
           </div>
         </div>
 
-        {/* 右侧：指标标签切换 + 关闭按钮 */}
-        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
-          {/* 指标切换胶囊按钮 */}
-          <div className="flex items-center p-0.5 rounded-xl bg-black/40 border border-white/10 shrink-0">
-            {metricTabs.map((tab) => {
-              const active = activeMetric === tab.key;
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveMetric(tab.key)}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer ${
-                    active
-                      ? tab.key === 'temp'
-                        ? 'bg-gradient-to-r from-amber-500/30 to-rose-500/30 text-amber-200 border border-amber-400/40 shadow-sm'
-                        : tab.key === 'cloud'
-                        ? 'bg-gradient-to-r from-sky-500/30 to-blue-500/30 text-sky-200 border border-sky-400/40 shadow-sm'
-                        : tab.key === 'wind'
-                        ? 'bg-gradient-to-r from-teal-500/30 to-cyan-500/30 text-teal-200 border border-teal-400/40 shadow-sm'
-                        : 'bg-gradient-to-r from-blue-500/30 to-indigo-500/30 text-blue-200 border border-blue-400/40 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                >
-                  <Icon className="w-3 h-3 shrink-0" />
-                  <span>{tab.label}</span>
-                  <span className="text-[9px] opacity-75 font-mono">({tab.unit})</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 关闭按钮 */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-            title="关闭天气看板"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        {/* 第二组（右侧/第二行）：指标切换胶囊栏（空间不足时自动换到第二行，绝不溢出容器） */}
+        <div className="flex items-center p-0.5 rounded-xl bg-black/40 border border-white/10 shrink-0">
+          {metricTabs.map((tab) => {
+            const active = activeMetric === tab.key;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveMetric(tab.key)}
+                title={`${tab.label} (${tab.unit})`}
+                className={`flex items-center gap-1 px-2 py-1 sm:py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer ${
+                  active
+                    ? tab.key === 'temp'
+                      ? 'bg-gradient-to-r from-amber-500/30 to-rose-500/30 text-amber-200 border border-amber-400/40 shadow-sm'
+                      : tab.key === 'cloud'
+                      ? 'bg-gradient-to-r from-sky-500/30 to-blue-500/30 text-sky-200 border border-sky-400/40 shadow-sm'
+                      : tab.key === 'wind'
+                      ? 'bg-gradient-to-r from-teal-500/30 to-cyan-500/30 text-teal-200 border border-teal-400/40 shadow-sm'
+                      : 'bg-gradient-to-r from-blue-500/30 to-indigo-500/30 text-blue-200 border border-blue-400/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden 2xl:inline whitespace-nowrap">{tab.label}</span>
+                <span className="hidden 2xl:inline text-[9px] opacity-75 font-mono">({tab.unit})</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* 逐小时数据网格展示区 */}
-      <div className="p-2 sm:p-3 overflow-x-auto custom-scrollbar">
-        {/* 24 小时逐小时数据水平条：采用连续紧凑列 + 垂直分割线，时间位于最底部 */}
-        <div className="grid grid-cols-24 w-full min-w-[720px] divide-x divide-white/10">
+      {/* 逐小时数据网格展示区：小屏保持每小时单元固定最小宽度不挤压，支持鼠标滚轮与横向滑动 */}
+      <div
+        className="p-2 sm:p-3 overflow-x-auto custom-scrollbar"
+        onWheel={(e) => {
+          if (e.deltaY !== 0) {
+            const el = e.currentTarget;
+            if (el.scrollWidth > el.clientWidth) {
+              el.scrollLeft += e.deltaY;
+            }
+          }
+        }}
+        onScroll={() => {
+          if (hoveredHour) {
+            setHoveredHour(null);
+            setHoverPos(null);
+          }
+        }}
+      >
+        {/* 24 小时逐小时数据水平条：采用 flex 布局，小屏单格不压缩（保持 min-w），大屏均分自适应撑满 */}
+        <div className="flex w-max min-w-full divide-x divide-white/10">
           {hourlyData.map((d) => {
             const val = d[activeMetric];
 
@@ -591,10 +604,10 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
                   setHoveredHour(null);
                   setHoverPos(null);
                 }}
-                className="group relative flex flex-col items-center justify-between py-2 sm:py-2.5 px-0.5 hover:bg-white/[0.07] transition-colors cursor-default"
+                className="group relative flex-1 min-w-[56px] sm:min-w-[64px] shrink-0 flex flex-col items-center justify-between py-2 sm:py-2.5 px-1 hover:bg-white/[0.07] transition-colors cursor-default"
               >
                 {/* 1. 指标数值 */}
-                <div className="text-[10px] 2xl:text-[11px] font-bold font-mono text-slate-100 group-hover:text-sky-300 leading-none pt-0.5">
+                <div className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 group-hover:text-sky-300 leading-none pt-0.5">
                   {activeMetric === 'temp' && `${val}℃`}
                   {activeMetric === 'cloud' && `${val}%`}
                   {activeMetric === 'wind' && `${val}m/s`}
@@ -641,7 +654,7 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
                 )}
 
                 {/* 3. 时间点 (置于最底部) */}
-                <span className="text-[9px] 2xl:text-[10px] font-mono text-slate-400 group-hover:text-slate-200 pb-0.5">
+                <span className="text-[10px] 2xl:text-[11px] font-mono text-slate-400 group-hover:text-slate-200 pb-0.5 whitespace-nowrap">
                   {d.hour}:00
                 </span>
               </div>
