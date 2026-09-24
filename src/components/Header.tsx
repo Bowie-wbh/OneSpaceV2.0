@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Clock, ChevronDown, ChevronUp, Columns2, LayoutDashboard, MessageSquare, ClipboardList, Activity, Globe2 } from 'lucide-react';
 import { WorkspaceViewMode, WorkspaceKanbanFilter } from '../types';
+
+const KANBAN_FILTER_OPTIONS: { key: WorkspaceKanbanFilter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'task', label: '任务管理', icon: ClipboardList },
+  { key: 'health', label: '健康管理', icon: Activity },
+  { key: 'innovative', label: 'OneEarth', icon: Globe2 },
+];
 
 interface HeaderProps {
   activeSatelliteCount: number;
@@ -28,6 +34,20 @@ export const Header: React.FC<HeaderProps> = ({
   onWorkspaceKanbanFilterChange,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [isKanbanFilterOpen, setIsKanbanFilterOpen] = useState(false);
+  const kanbanFilterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (kanbanFilterRef.current && !kanbanFilterRef.current.contains(e.target as Node)) {
+        setIsKanbanFilterOpen(false);
+      }
+    };
+    if (isKanbanFilterOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isKanbanFilterOpen]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -108,53 +128,59 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* 右上角：看板筛选导航（任务管理 / 健康管理 / 创新应用）+ 卫星在线胶囊 + 时钟 */}
+      {/* 右上角：看板筛选导航（任务管理 / 健康管理 / 创新应用，下拉菜单交互）+ 卫星在线胶囊 + 时钟 */}
       <div className="flex items-center gap-2 sm:gap-3">
         {activeTab === 'workspace' && workspaceViewMode !== 'chat' && onWorkspaceKanbanFilterChange && (
-          <div className="flex items-center gap-1 p-1 rounded-full bg-white/95 dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/[0.08] shadow-xs">
+          <div className="relative" ref={kanbanFilterRef}>
             <button
-              id="kanban-filter-task"
-              onClick={() => onWorkspaceKanbanFilterChange('task')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                workspaceKanbanFilter === 'task'
-                  ? 'bg-blue-50 dark:bg-sky-500/15 text-blue-600 dark:text-sky-400'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-              title="任务管理"
+              id="kanban-filter-dropdown-trigger"
+              type="button"
+              onClick={() => setIsKanbanFilterOpen((prev) => !prev)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white/95 dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/[0.08] shadow-xs text-blue-600 dark:text-sky-400 hover:border-blue-300 dark:hover:border-sky-500/40 transition-all cursor-pointer"
             >
-              <ClipboardList className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">任务管理</span>
+              {(() => {
+                const active = KANBAN_FILTER_OPTIONS.find((opt) => opt.key === workspaceKanbanFilter) || KANBAN_FILTER_OPTIONS[0];
+                const ActiveIcon = active.icon;
+                return (
+                  <>
+                    <ActiveIcon className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{active.label}</span>
+                  </>
+                );
+              })()}
+              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isKanbanFilterOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            <button
-              id="kanban-filter-health"
-              onClick={() => onWorkspaceKanbanFilterChange('health')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                workspaceKanbanFilter === 'health'
-                  ? 'bg-blue-50 dark:bg-sky-500/15 text-blue-600 dark:text-sky-400'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-              title="健康管理"
-            >
-              <Activity className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">健康管理</span>
-            </button>
-
-            <button
-              id="kanban-filter-innovative"
-              onClick={() => onWorkspaceKanbanFilterChange('innovative')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                workspaceKanbanFilter === 'innovative'
-                  ? 'bg-blue-50 dark:bg-sky-500/15 text-blue-600 dark:text-sky-400'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-              title="OneEarth太空部分"
-            >
-              <Globe2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">OneEarth太空部分</span>
-            </button>
+            {isKanbanFilterOpen && (
+              <div className="absolute right-0 top-full mt-1.5 z-50 w-44 py-1.5 rounded-xl bg-white/95 dark:bg-[#0c101c]/95 border border-slate-200/90 dark:border-white/[0.08] shadow-2xl backdrop-blur-2xl animate-fadeIn">
+                {KANBAN_FILTER_OPTIONS.map((opt) => {
+                  const OptIcon = opt.icon;
+                  const isActive = workspaceKanbanFilter === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      id={`kanban-filter-${opt.key}`}
+                      type="button"
+                      onClick={() => {
+                        onWorkspaceKanbanFilterChange(opt.key);
+                        setIsKanbanFilterOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-left transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-50 dark:bg-sky-500/15 text-blue-600 dark:text-sky-400'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <OptIcon className="w-3.5 h-3.5 shrink-0" />
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
+
 
         {/* 胶囊：时钟 + 卫星在线数合并，点击展开卫星列表 */}
         <button

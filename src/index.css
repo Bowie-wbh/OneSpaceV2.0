@@ -234,6 +234,56 @@
   animation: glow-shift 16s ease-in-out infinite;
 }
 
+/* 蓝色渐变流光文字动效 (Blue Gradient Flowing Shimmer Text) */
+@keyframes text-blue-stream {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.text-blue-flow {
+  background-image: linear-gradient(
+    90deg,
+    #1d4ed8 0%,
+    #0284c7 20%,
+    #38bdf8 40%,
+    #93c5fd 50%,
+    #38bdf8 60%,
+    #0284c7 80%,
+    #1d4ed8 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: text-blue-stream 5s linear infinite;
+  filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.15));
+}
+
+.dark .text-blue-flow {
+  background-image: linear-gradient(
+    90deg,
+    #38bdf8 0%,
+    #60a5fa 22%,
+    #bae6fd 42%,
+    #ffffff 50%,
+    #bae6fd 58%,
+    #60a5fa 78%,
+    #38bdf8 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: text-blue-stream 5s linear infinite;
+  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.45));
+}
+
 /* 地图上的红点闪烁标记：每日任务执行完毕时联动提示 */
 @keyframes mapPulseRing {
   0% {

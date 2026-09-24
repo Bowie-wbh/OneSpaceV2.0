@@ -13,13 +13,15 @@ import {
   ConstellationSatelliteItem,
 } from '../../data/mockRemoteSensingData';
 import { HistoryRecord } from '../../types/earthDemoTypes';
+import { AIRPORT_WEATHER_LIST } from './WeatherForecastBar';
 import { 
   Globe, 
   Sun, 
   Moon, 
   Flame,
   Building2,
-  CloudSun,
+  Maximize,
+  Minimize,
 } from 'lucide-react';
 
 declare const Cesium: any;
@@ -81,9 +83,9 @@ const createBuildingMarkerCanvas = (isSelected = false): string => {
   const cx = size / 2;
   const cy = size / 2;
   const dotRadius = 9.5; // 与 2D 圆点尺寸恒定保持一致，选中态不放大
-  const dotColor = '#8b4513';
-  const ringColor = 'rgba(217, 119, 6, 0.55)';
-  const glowColor = 'rgba(217, 119, 6, 0.85)';
+  const dotColor = '#eab308';
+  const ringColor = 'rgba(234, 179, 8, 0.55)';
+  const glowColor = 'rgba(234, 179, 8, 0.85)';
 
   // 选中态外圈光圈（对应 2D box-shadow 0 0 0 4px 环形高亮）
   if (isSelected) {
@@ -235,6 +237,7 @@ interface CesiumGlobeProps {
   currentEarthObject?: EarthObject;
   showFire?: boolean;
   showBuilding?: boolean;
+  showAirport?: boolean;
   selectedPointId?: string | null;
   onSelectPoint?: (point: SpatialMarkerPoint) => void;
   targetFlyPoint?: SpatialMarkerPoint | null;
@@ -243,8 +246,9 @@ interface CesiumGlobeProps {
   onToggleDimension?: () => void;
   onSelectSatellite?: (code: string) => void;
   selectedSatelliteId?: string | null;
-  showWeatherForecast?: boolean;
-  onToggleWeatherForecast?: () => void;
+  onDeselectAll?: () => void;
+  isKanbanFullscreen?: boolean;
+  onToggleKanbanFullscreen?: () => void;
 }
 
 export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
@@ -258,6 +262,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
   currentEarthObject = EARTH_OBJECTS[0],
   showFire = true,
   showBuilding = true,
+  showAirport = false,
   selectedPointId = null,
   onSelectPoint,
   targetFlyPoint = null,
@@ -265,15 +270,17 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
   viewDimension = '3d',
   onToggleDimension,
   onSelectSatellite,
-  selectedSatelliteId = 'scs-04-16',
-  showWeatherForecast = false,
-  onToggleWeatherForecast,
+  selectedSatelliteId = '',
+  onDeselectAll,
+  isKanbanFullscreen = false,
+  onToggleKanbanFullscreen,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const footprintEntityRef = useRef<any>(null);
   const spatialEntitiesRef = useRef<any[]>([]);
   const firePolygonEntitiesRef = useRef<any[]>([]);
+  const airportEntitiesRef = useRef<any[]>([]);
   const isFlyingRef = useRef<boolean>(false);
 
   // 标绘图标引用 (普通与高亮选中状态)
@@ -291,12 +298,10 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [cameraAltitude, setCameraAltitude] = useState<string>('18,000 km');
   const [isDaylight, setIsDaylight] = useState<boolean>(true);
-  const [internalSelectedSatId, setInternalSelectedSatId] = useState<string>(selectedSatelliteId || 'scs-04-16');
+  const [internalSelectedSatId, setInternalSelectedSatId] = useState<string>(selectedSatelliteId || '');
 
   useEffect(() => {
-    if (selectedSatelliteId) {
-      setInternalSelectedSatId(selectedSatelliteId);
-    }
+    setInternalSelectedSatId(selectedSatelliteId || '');
   }, [selectedSatelliteId]);
 
   // 状态引用保证事件闭包中获取最新状态
@@ -325,6 +330,11 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
     showBuildingRef.current = showBuilding;
   }, [showBuilding]);
 
+  const showAirportRef = useRef(showAirport);
+  useEffect(() => {
+    showAirportRef.current = showAirport;
+  }, [showAirport]);
+
   const selectedPointIdRef = useRef(selectedPointId);
   useEffect(() => {
     selectedPointIdRef.current = selectedPointId;
@@ -339,6 +349,11 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
   useEffect(() => {
     onSelectSatelliteRef.current = onSelectSatellite;
   }, [onSelectSatellite]);
+
+  const onDeselectAllRef = useRef(onDeselectAll);
+  useEffect(() => {
+    onDeselectAllRef.current = onDeselectAll;
+  }, [onDeselectAll]);
 
   const onPointScreenPositionChangeRef = useRef(onPointScreenPositionChange);
   useEffect(() => {
@@ -546,6 +561,8 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
             if (pointId) {
               const point = SPATIAL_MARKER_POINTS.find((p) => p.id === pointId);
               if (point) {
+                // 点击火点/古建筑标点属于非卫星区域，同步取消已有的卫星选择与轨道选中态
+                onDeselectAllRef.current?.();
                 onSelectPointRef.current?.(point);
                 if (viewer.scene?.canvas) {
                   // PointMindMapOverlay 与 Cesium 画布容器共享同一父级坐标系，直接使用画布内坐标即可对齐
@@ -570,14 +587,17 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
               }
             }
 
-            // 匹配卫星图标：切换高亮选中状态，并通知外部卫星数据看板展示该卫星数据
-            if (typeof id === 'string' && id.startsWith('satellite-')) {
+            // 匹配卫星图标（排除轨道线实体 satellite-orbit- 前缀）：切换高亮选中状态，并通知外部卫星数据看板展示该卫星数据
+            if (typeof id === 'string' && id.startsWith('satellite-') && !id.startsWith('satellite-orbit-')) {
               const clickedSatId = id.replace('satellite-', '');
               setInternalSelectedSatId(clickedSatId);
               onSelectSatelliteRef.current?.(clickedSatId);
               return;
             }
           }
+
+          // 点击地球空白区域或未命中任何可交互标点/卫星/轨道：取消已有的卫星选择与轨道选中态
+          onDeselectAllRef.current?.();
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         // 鼠标悬停标点时显示手型指针
@@ -710,6 +730,22 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
       });
     });
 
+    // 全球普查任务·机场筛选对应区域标注：简洁蓝色圆点，无需图标画布
+    airportEntitiesRef.current = AIRPORT_WEATHER_LIST.map((airport) =>
+      viewer.entities.add({
+        id: `spatial-airport-${airport.id}`,
+        name: airport.name,
+        position: Cesium.Cartesian3.fromDegrees(airport.lng, airport.lat, 0),
+        show: showAirportRef.current,
+        point: {
+          pixelSize: 9,
+          color: Cesium.Color.fromCssColorString('#3b82f6'),
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 2,
+        },
+      })
+    );
+
     // 遍历添加火点不规则火区多边形实体（黄色/亮橙发光火区，带高对比红色/暗橙色热解轮廓）
     firePolygonEntitiesRef.current = [];
     SPATIAL_MARKER_POINTS.filter((p) => p.type === 'fire' && p.firePolygons && p.firePolygons.length > 0).forEach(
@@ -787,7 +823,7 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
       };
 
       // 惯性轨道空间圆环
-      const isInitialSelected = satItem.id === (internalSelectedSatId || 'scs-04-16');
+      const isInitialSelected = !!internalSelectedSatId && satItem.id === internalSelectedSatId;
       const orbitEntity = viewer.entities.add({
         id: `satellite-orbit-${satItem.id}`,
         name: `${satItem.code} 惯性空间轨道`,
@@ -868,7 +904,12 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
     firePolygonEntitiesRef.current.forEach(({ entity }) => {
       entity.show = showFire;
     });
-  }, [showFire, showBuilding, cesiumReady]);
+
+    // 控制机场蓝色圆点显隐
+    airportEntitiesRef.current.forEach((entity: any) => {
+      entity.show = showAirport;
+    });
+  }, [showFire, showBuilding, showAirport, cesiumReady]);
 
   // 根据选中状态高亮标绘图标与放大比例，并高亮火区多边形
   useEffect(() => {
@@ -1053,6 +1094,22 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
           tabIndex={-1}
         />
 
+        {/* 看板全屏切换按钮 */}
+        {onToggleKanbanFullscreen && (
+          <button
+            id="btn-toggle-kanban-fullscreen"
+            onClick={onToggleKanbanFullscreen}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-sky-500/60 rounded-xl backdrop-blur-xl shadow-2xl transition-all duration-200 hover:scale-105 cursor-pointer group"
+            title={isKanbanFullscreen ? '退出全屏看板' : '看板全屏显示'}
+          >
+            {isKanbanFullscreen ? (
+              <Minimize className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
+            ) : (
+              <Maximize className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
+            )}
+          </button>
+        )}
+
         {/* 3D / 2D 视图切换按钮 */}
         {onToggleDimension && (
           <button
@@ -1096,22 +1153,6 @@ export const CesiumGlobe: React.FC<CesiumGlobeProps> = ({
             <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300 group-hover:drop-shadow-[0_0_8px_rgba(165,180,252,0.6)]" />
           )}
         </button>
-
-        {/* 气象环境预报看板切换按钮 */}
-        {onToggleWeatherForecast && (
-          <button
-            id="btn-toggle-weather-forecast-3d"
-            onClick={onToggleWeatherForecast}
-            title={showWeatherForecast ? '关闭气象环境预报看板' : '打开气象环境预报看板 (多机场15天逐小时多要素时序)'}
-            className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-900/90 hover:bg-slate-800 border rounded-xl backdrop-blur-xl transition-all duration-200 hover:scale-105 shadow-2xl cursor-pointer group ${
-              showWeatherForecast
-                ? 'border-sky-400 bg-sky-950/60 shadow-[0_0_15px_rgba(56,189,248,0.4)] text-sky-300'
-                : 'border-slate-700/80 hover:border-sky-500/60 text-slate-300 hover:text-white'
-            }`}
-          >
-            <CloudSun className={`w-4 h-4 sm:w-5 sm:h-5 ${showWeatherForecast ? 'text-sky-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]' : 'text-sky-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]'}`} />
-          </button>
-        )}
       </div>
     </div>
   );

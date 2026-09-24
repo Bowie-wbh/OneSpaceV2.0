@@ -1,9 +1,7 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   CloudSun,
   X,
-  ChevronDown,
-  Calendar,
   Plane,
   Thermometer,
   Cloud,
@@ -11,7 +9,6 @@ import {
   CloudRain,
   Sun,
   CloudLightning,
-  Sparkles,
 } from 'lucide-react';
 
 export interface AirportWeatherItem {
@@ -231,26 +228,6 @@ interface WeatherForecastBarProps {
   selectedAirport?: AirportWeatherItem | null;
 }
 
-// 基于今天 2026-09-22 动态生成包含今天的未来 15 天日期
-function generateFuture15Days() {
-  const baseDate = new Date(2026, 8, 22); // 2026-09-22
-  const days: { dateStr: string; label: string; weekday: string; isToday: boolean }[] = [];
-  const weekNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-
-  for (let i = 0; i < 15; i++) {
-    const d = new Date(baseDate);
-    d.setDate(baseDate.getDate() + i);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
-    const weekday = weekNames[d.getDay()];
-    const label = i === 0 ? `今天 (${mm}/${dd})` : i === 1 ? `明天 (${mm}/${dd})` : `${mm}/${dd} ${weekday}`;
-    days.push({ dateStr, label, weekday, isToday: i === 0 });
-  }
-  return days;
-}
-
 // 确定性生成所选机场与日期的 24 小时逐小时气象数据
 function generateHourlyForecast(airport: AirportWeatherItem, dateStr: string): HourlyDataPoint[] {
   const dayOffset = (new Date(dateStr).getTime() - new Date('2026-09-22').getTime()) / (1000 * 3600 * 24);
@@ -300,14 +277,35 @@ function generateHourlyForecast(airport: AirportWeatherItem, dateStr: string): H
   return points;
 }
 
+// 从当前时刻整点起连续滚动生成指定小时数的逐小时预报（支持跨日）
+function generateContinuousForecast(airport: AirportWeatherItem, hoursCount: number): (HourlyDataPoint & { dateLabel: string })[] {
+  const now = new Date();
+  now.setMinutes(0, 0, 0);
+  const points: (HourlyDataPoint & { dateLabel: string })[] = [];
+  const dayCache = new Map<string, HourlyDataPoint[]>();
+
+  for (let i = 0; i < hoursCount; i++) {
+    const pointTime = new Date(now.getTime() + i * 3600000);
+    const yyyy = pointTime.getFullYear();
+    const mm = String(pointTime.getMonth() + 1).padStart(2, '0');
+    const dd = String(pointTime.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    if (!dayCache.has(dateStr)) {
+      dayCache.set(dateStr, generateHourlyForecast(airport, dateStr));
+    }
+    const dayPoints = dayCache.get(dateStr)!;
+    const base = dayPoints[pointTime.getHours()];
+    points.push({ ...base, dateLabel: `${mm}/${dd}` });
+  }
+
+  return points;
+}
+
 export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
   onClose,
   onSelectAirport,
   selectedAirport: propSelectedAirport,
 }) => {
-  const futureDays = useMemo(() => generateFuture15Days(), []);
-  const [selectedDate, setSelectedDate] = useState<string>(futureDays[0].dateStr);
-
   // 默认新疆乌鲁木齐机场
   const [selectedAirport, setSelectedAirport] = useState<AirportWeatherItem>(
     propSelectedAirport || AIRPORT_WEATHER_LIST[0]
@@ -320,35 +318,15 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
   }, [propSelectedAirport]);
 
   const [activeMetric, setActiveMetric] = useState<WeatherMetricType>('temp');
-  const [isAirportOpen, setIsAirportOpen] = useState<boolean>(false);
-  const [isDateOpen, setIsDateOpen] = useState<boolean>(false);
-  const [airportSearch, setAirportSearch] = useState<string>('');
 
   const [hoveredHour, setHoveredHour] = useState<HourlyDataPoint | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const barContainerRef = useRef<HTMLDivElement>(null);
 
-  const airportDropdownRef = useRef<HTMLDivElement>(null);
-  const dateDropdownRef = useRef<HTMLDivElement>(null);
-
-  // 点击外部关闭下拉菜单
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (airportDropdownRef.current && !airportDropdownRef.current.contains(e.target as Node)) {
-        setIsAirportOpen(false);
-      }
-      if (dateDropdownRef.current && !dateDropdownRef.current.contains(e.target as Node)) {
-        setIsDateOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // 逐小时气象数据
+  // 逐小时气象数据：从当前整点起连续滚动 24 小时（下方通过鼠标滚轮横向切换）
   const hourlyData = useMemo(() => {
-    return generateHourlyForecast(selectedAirport, selectedDate);
-  }, [selectedAirport, selectedDate]);
+    return generateContinuousForecast(selectedAirport, 36);
+  }, [selectedAirport]);
 
   // 计算当前指标极值与均值
   const metricStats = useMemo(() => {
@@ -358,24 +336,6 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
     const avg = Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10;
     return { min, max, avg };
   }, [hourlyData, activeMetric]);
-
-  const filteredAirports = useMemo(() => {
-    const q = airportSearch.trim().toLowerCase();
-    if (!q) return AIRPORT_WEATHER_LIST;
-    return AIRPORT_WEATHER_LIST.filter(
-      (a) =>
-        a.name.toLowerCase().includes(q) ||
-        a.shortName.toLowerCase().includes(q) ||
-        a.city.toLowerCase().includes(q) ||
-        a.code.toLowerCase().includes(q)
-    );
-  }, [airportSearch]);
-
-  const handleAirportChange = (airport: AirportWeatherItem) => {
-    setSelectedAirport(airport);
-    setIsAirportOpen(false);
-    onSelectAirport(airport);
-  };
 
   const metricTabs: { key: WeatherMetricType; label: string; unit: string; icon: any }[] = [
     { key: 'temp', label: '温度 2t', unit: '℃', icon: Thermometer },
@@ -397,7 +357,7 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
     <div
       ref={barContainerRef}
       id="weather-forecast-dashboard-bar"
-      className="absolute bottom-3 sm:bottom-4 left-3 sm:left-6 md:left-12 lg:left-16 right-3 sm:right-6 md:right-12 lg:right-16 z-40 rounded-2xl bg-slate-950/45 border border-white/15 backdrop-blur-xl shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(56,189,248,0.08)] animate-fadeIn text-white font-sans select-none pointer-events-auto"
+      className="absolute bottom-3 sm:bottom-4 left-3 sm:left-6 md:left-12 lg:left-16 z-40 w-[820px] max-w-[92vw] rounded-2xl bg-slate-950/45 border border-white/15 backdrop-blur-xl shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(56,189,248,0.08)] animate-fadeIn text-white font-sans select-none pointer-events-auto"
     >
       {/* 独立绝对定位的关闭按钮：始终锁死在卡片最右上角，无论内部如何折行绝不溢出或错位 */}
       <button
@@ -411,111 +371,17 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
 
       {/* 顶部控制栏：右侧预留 pr-10 绝不与关闭按钮冲突；小屏或狭窄空间下自动整洁排成两行，宽屏单行展开 */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 pl-3 sm:pl-4 pr-11 sm:pr-12 py-2.5 border-b border-white/10 bg-white/[0.04]">
-        {/* 第一组（左侧）：模块标题与地区、日期筛选 */}
+        {/* 第一组（左侧）：模块标题与当前机场（只读展示，机场由外部联动选定） */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
           <div className="text-xs sm:text-sm font-bold text-slate-100 tracking-wide shrink-0">
             <span className="hidden sm:inline whitespace-nowrap">在轨短临气象预报</span>
             <span className="sm:hidden whitespace-nowrap">气象预报</span>
           </div>
 
-          {/* 地区（机场）下拉筛选 */}
-          <div className="relative shrink-0" ref={airportDropdownRef}>
-            <button
-              type="button"
-              onClick={() => {
-                setIsAirportOpen(!isAirportOpen);
-                setIsDateOpen(false);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 hover:border-sky-400/60 text-xs font-semibold transition-all cursor-pointer text-slate-200 shrink-0"
-              title="切换机场并定位"
-            >
-              <Plane className="w-3 h-3 text-sky-400 shrink-0" />
-              <span className="whitespace-nowrap">{selectedAirport.shortName}</span>
-              <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${isAirportOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isAirportOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-64 sm:w-72 max-h-64 rounded-xl bg-[#0c101c]/95 border border-white/15 shadow-2xl backdrop-blur-2xl z-50 overflow-hidden flex flex-col animate-fadeIn">
-                <div className="p-2 border-b border-white/10 bg-white/5">
-                  <input
-                    value={airportSearch}
-                    onChange={(e) => setAirportSearch(e.target.value)}
-                    placeholder="搜索机场或城市..."
-                    className="w-full px-2 py-1 bg-black/40 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 outline-none focus:border-sky-400"
-                    autoFocus
-                  />
-                </div>
-                <div className="overflow-y-auto max-h-52 divide-y divide-white/[0.06] custom-scrollbar">
-                  {filteredAirports.map((airport) => {
-                    const isSelected = selectedAirport.id === airport.id;
-                    return (
-                      <button
-                        key={airport.id}
-                        type="button"
-                        onClick={() => handleAirportChange(airport)}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors cursor-pointer ${
-                          isSelected ? 'bg-sky-500/20 text-sky-300 font-bold' : 'text-slate-300 hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-slate-100 font-medium">{airport.name}</div>
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                            <span>{airport.city}</span>
-                            <span>·</span>
-                            <span className="text-sky-400/90">{airport.code}</span>
-                          </div>
-                        </div>
-                        {isSelected && <Sparkles className="w-3.5 h-3.5 text-sky-400 shrink-0 ml-1" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 日期筛选（15天） */}
-          <div className="relative shrink-0" ref={dateDropdownRef}>
-            <button
-              type="button"
-              onClick={() => {
-                setIsDateOpen(!isDateOpen);
-                setIsAirportOpen(false);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 hover:border-sky-400/60 text-xs font-semibold transition-all cursor-pointer text-slate-200 shrink-0"
-            >
-              <Calendar className="w-3 h-3 text-sky-400 shrink-0" />
-              <span className="whitespace-nowrap">
-                {futureDays.find((d) => d.dateStr === selectedDate)?.label || selectedDate}
-              </span>
-              <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${isDateOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isDateOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-48 max-h-60 rounded-xl bg-[#0c101c]/95 border border-white/15 shadow-2xl backdrop-blur-2xl z-50 overflow-y-auto divide-y divide-white/[0.06] animate-fadeIn custom-scrollbar">
-                {futureDays.map((d) => {
-                  const isSelected = selectedDate === d.dateStr;
-                  return (
-                    <button
-                      key={d.dateStr}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDate(d.dateStr);
-                        setIsDateOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs transition-colors cursor-pointer ${
-                        isSelected ? 'bg-sky-500/20 text-sky-300 font-bold' : 'text-slate-300 hover:bg-white/10'
-                      }`}
-                    >
-                      <span>{d.label}</span>
-                      {d.isToday && (
-                        <span className="text-[9px] px-1 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">今日</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          {/* 当前机场只读标签 */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/15 text-xs font-semibold text-slate-200 shrink-0">
+            <Plane className="w-3 h-3 text-sky-400 shrink-0" />
+            <span className="whitespace-nowrap">{selectedAirport.shortName}</span>
           </div>
         </div>
 
@@ -570,8 +436,8 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
         }}
       >
         {/* 24 小时逐小时数据水平条：采用 flex 布局，小屏单格不压缩（保持 min-w），大屏均分自适应撑满 */}
-        <div className="flex w-max min-w-full divide-x divide-white/10">
-          {hourlyData.map((d) => {
+        <div className="flex w-max divide-x divide-white/10">
+          {hourlyData.map((d, idx) => {
             const val = d[activeMetric];
 
             // 依据指标计算百分比高度或强度
@@ -588,7 +454,7 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
 
             return (
               <div
-                key={d.hour}
+                key={`${d.dateLabel}-${d.hour}-${idx}`}
                 onMouseEnter={(e) => {
                   if (barContainerRef.current) {
                     const parentRect = barContainerRef.current.getBoundingClientRect();
@@ -604,7 +470,7 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
                   setHoveredHour(null);
                   setHoverPos(null);
                 }}
-                className="group relative flex-1 min-w-[56px] sm:min-w-[64px] shrink-0 flex flex-col items-center justify-between py-2 sm:py-2.5 px-1 hover:bg-white/[0.07] transition-colors cursor-default"
+                className="group relative w-16 sm:w-[68px] shrink-0 flex flex-col items-center justify-between py-2 sm:py-2.5 px-1 hover:bg-white/[0.07] transition-colors cursor-default"
               >
                 {/* 1. 指标数值 */}
                 <div className="text-[10px] 2xl:text-[11px] font-bold text-slate-100 group-hover:text-sky-300 leading-none pt-0.5">
@@ -653,9 +519,14 @@ export const WeatherForecastBar: React.FC<WeatherForecastBarProps> = ({
                   </div>
                 )}
 
-                {/* 3. 时间点 (置于最底部) */}
-                <span className="text-[10px] 2xl:text-[11px] font-mono text-slate-400 group-hover:text-slate-200 pb-0.5 whitespace-nowrap">
-                  {d.hour}:00
+                {/* 3. 时间点 (置于最底部)：跨天时在小时上方显示日期 */}
+                <span className="flex flex-col items-center gap-0.5 pb-0.5">
+                  {d.hour === 0 && (
+                    <span className="text-[8px] leading-none text-sky-400/80 font-mono whitespace-nowrap">{d.dateLabel}</span>
+                  )}
+                  <span className="text-[10px] 2xl:text-[11px] font-mono text-slate-400 group-hover:text-slate-200 whitespace-nowrap">
+                    {d.hour}:00
+                  </span>
                 </span>
               </div>
             );

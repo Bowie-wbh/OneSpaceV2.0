@@ -96,7 +96,6 @@ interface ChatConversationProps {
   onConfirmRequirementsReady?: (messageId: string) => void;
   onStartPlanFromQA?: (location: string, option?: import('../types').QAWindowOption) => void;
   onGoToInnovativeApp?: () => void;
-  onGoToAchievementManagement?: () => void;
   onGoToTaskManagement?: () => void;
 }
 
@@ -115,7 +114,6 @@ export const ChatConversation: React.FC<ChatConversationProps> = ({
   onConfirmRequirementsReady,
   onStartPlanFromQA,
   onGoToInnovativeApp,
-  onGoToAchievementManagement,
   onGoToTaskManagement,
 }) => {
   return (
@@ -708,21 +706,6 @@ export const ChatConversation: React.FC<ChatConversationProps> = ({
                   collapsible={true}
                   defaultExpanded={false}
                 />
-              )}
-
-              {/* 结果下载 (同步到成果管理页面) */}
-              {msg.showGoToAchievementButton && (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={onGoToAchievementManagement}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-sky-500/15 border border-blue-200 dark:border-sky-500/30 text-blue-700 dark:text-sky-300 hover:bg-blue-100 dark:hover:bg-sky-500/25 text-xs font-semibold transition-all cursor-pointer"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>结果下载 (已同步到成果管理页面)</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
               )}
             </div>
 

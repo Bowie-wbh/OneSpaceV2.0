@@ -9,7 +9,6 @@ import { ChatInputArea } from './components/ChatInputArea';
 import { ChatConversation } from './components/ChatConversation';
 import { HealthCheckView } from './components/HealthCheckView';
 import { InnovativeAppView } from './components/InnovativeAppView';
-import { AchievementManagementView } from './components/AchievementManagementView';
 import { TaskManagementKanban, PlannedTaskItem, GROUND_STAGE_STEP_COUNT, ONBOARD_STAGE_STEP_COUNT, FLOW_STEP_INTERVAL_MS } from './components/TaskManagementKanban';
 import { TimeSeriesUploadModal, TimeSeriesTaskData } from './components/TimeSeriesUploadModal';
 import { 
@@ -26,10 +25,8 @@ import {
   FlowStepItem,
   TimeSeriesDayPlan,
   InnovativeAppItem,
-  QAWindowOption,
-  AchievementItem
+  QAWindowOption
 } from './types';
-import { INITIAL_ACHIEVEMENTS } from './data/achievementData';
 import { 
   INITIAL_SATELLITES, 
   REGULAR_ONBOARD_FLOW_STEPS,
@@ -242,12 +239,12 @@ export function App() {
   // 主题模式 (dark / light)
   const [theme, setTheme] = useState<ThemeMode>('dark');
 
-  // 当前菜单标签：'workspace'（统一对话页，整合任务规划/健康管理/创新应用）| 'achievement-management'
+  // 当前菜单标签：'workspace'（统一对话页，整合任务规划/健康管理/创新应用）
   const [activeTab, setActiveTab] = useState<MainTabType>('workspace');
   // 统一对话页展示模式：对话+看板 | 仅看板 | 仅对话
   const [workspaceViewMode, setWorkspaceViewMode] = useState<WorkspaceViewMode>('split');
   // 统一对话页看板筛选：任务管理看板 | 健康管理看板 | OneEarth太空部分（默认初次进入 OneEarth太空部分）
-  const [workspaceKanbanFilter, setWorkspaceKanbanFilter] = useState<WorkspaceKanbanFilter>('innovative');
+  const [workspaceKanbanFilter, setWorkspaceKanbanFilter] = useState<WorkspaceKanbanFilter>('task');
   // 统一对话页对话区可调节宽度（split 模式下生效）
   const [workspaceChatPanelWidth, setWorkspaceChatPanelWidth] = useState<number>(460);
   const [isDraggingWorkspaceSplitter, setIsDraggingWorkspaceSplitter] = useState<boolean>(false);
@@ -343,8 +340,6 @@ export function App() {
   
   // 任务规划/健康管理/创新应用统一对话列表
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  // 成果管理列表数据
-  const [achievements, setAchievements] = useState<AchievementItem[]>(INITIAL_ACHIEVEMENTS);
   // 输入框预填充
   const [prefillPrompt, setPrefillPrompt] = useState<string>('');
   // 生成状态
@@ -2320,26 +2315,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
           return s;
         }));
       }
-
-      const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
-      const locName = draft.location || order.targetName || '宁波舟山港口及周边水域';
-      const cleanTitleName = locName.split(' ')[0] || '宁波舟山港';
-
-      const newAch: AchievementItem = {
-        id: 'ach-new-' + Date.now(),
-        title: `${cleanTitleName}红外热成像与火情监测成果`,
-        imagingMode: '热红外反演',
-        satelliteName: order.satelliteName,
-        cameraType: order.sensorMode,
-        captureTime: nowStr,
-        imageUrl: SAMPLE_RESULT_IMAGES.fireDetection,
-        resolution: order.resolution || '0.5m',
-        location: locName,
-        fileSize: '46.8 MB',
-        cloudCoverage: '0.5%',
-      };
-
-      setAchievements(prev => [newAch, ...prev]);
     }
   };
 
@@ -2371,7 +2346,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     qaTargetLocation,
     qaWindowOptions,
     showGoToAppButton,
-    showGoToAchievementButton,
     showGoToTaskButton,
     isOnboardFlowPending,
     timeSeriesHighRiskLocations,
@@ -2401,7 +2375,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
     qaTargetLocation?: string;
     qaWindowOptions?: QAWindowOption[];
     showGoToAppButton?: boolean;
-    showGoToAchievementButton?: boolean;
     showGoToTaskButton?: boolean;
     isOnboardFlowPending?: boolean;
     timeSeriesHighRiskLocations?: { name: string; lng: number; lat: number }[];
@@ -2464,7 +2437,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
             qaTargetLocation,
             qaWindowOptions,
             showGoToAppButton,
-            showGoToAchievementButton,
             showGoToTaskButton,
             isOnboardFlowPending,
             timeSeriesHighRiskLocations,
@@ -2913,25 +2885,9 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         currentStepIndex: groundSteps.length,
         isOnboardFlowPending: true,
         onFinish: () => {
-          // 星上所有结果下传后（1.8秒延迟），替换内容，呈现折叠的星上流程，成果同步到成果管理页面
+          // 星上所有结果下传后（1.8秒延迟），替换内容，呈现折叠的星上流程
           setTimeout(() => {
-            const finalContent = `【Day ${dayIndex} 任务执行完成】${cur.location}高风险区遥感观测已闭环，成果已完成下传并同步至成果管理页面。`;
-
-            // 同步添加到成果管理页面数据
-            const newAch: AchievementItem = {
-              id: 'ach-ts-' + Date.now(),
-              title: `${cur.location}高风险火情遥感检测`,
-              satelliteName: cur.sat,
-              imagingMode: '长时序模式',
-              captureTime: `2026-09-0${dayIndex} ${cur.time.split(' - ')[0]}`,
-              cameraType: '高分辨率红外热成像仪',
-              resolution: '0.3m',
-              fileSize: '85.2 MB',
-              imageUrl: cur.img,
-              location: cur.location,
-              description: `长时序 Day ${dayIndex} 星载边缘计算与红外热成像分析成果。`,
-            };
-            setAchievements(prev => [newAch, ...prev]);
+            const finalContent = `【Day ${dayIndex} 任务执行完成】${cur.location}高风险区遥感观测已闭环，成果已完成下传。`;
 
             setMessages(prev => prev.map(m => {
               if (m.id === asstExecMsgId) {
@@ -2942,7 +2898,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
                   onboardFlowSteps: onboardSteps,
                   resultImage: cur.img,
                   fireDetected: cur.fire,
-                  showGoToAchievementButton: true,
                   fireHotspots: cur.fire ? [
                     { x: 42, y: 38, temp: '382℃ (异常热点)', area: `${cur.location}核心区` },
                     { x: 58, y: 64, temp: '165℃ (中度热点)', area: `${cur.location}外围区` }
@@ -2980,7 +2935,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
               setTimeout(() => {
                 streamAssistantResponse({
                   messageId: finishMsgId,
-                  content: '🎉 祝贺！长时序多日连续高风险目标监测计划全部天次（Day 1 ~ Day 4）已全部圆满完成，所有遥感与解译成果已同步至成果管理页面。',
+                  content: '🎉 祝贺！长时序多日连续高风险目标监测计划全部天次（Day 1 ~ Day 4）已全部圆满完成，所有遥感与解译成果已完成下传。',
                   mode: 'time_series',
                 });
               }, 400);
@@ -3384,9 +3339,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         setSelectedInnovativeApp(customApps[0]);
       }
     },
-    onGoToAchievementManagement: () => {
-      setActiveTab('achievement-management');
-    },
     onGoToTaskManagement: () => {
       setWorkspaceKanbanFilter('task');
       setWorkspaceViewMode(prev => (prev === 'chat' ? 'split' : prev));
@@ -3397,7 +3349,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
   // 打招呼与推荐问题（对话+看板 / 仅对话 两种模式共用）
   const renderGreetingSuggestions = (titleClassName: string) => (
     <div className="space-y-2">
-      <h2 className={titleClassName}>请问有什么可以帮到您？</h2>
+      <h1 className={`${titleClassName} text-blue-flow select-none`}>三体计算星座任务调度</h1>
       <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
         {WORKSPACE_SUGGESTED_PROMPTS.map((p) => (
           <button
@@ -3423,7 +3375,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
               <Bot className="w-6 h-6" />
             </div>
             <div className="max-w-lg mx-auto">
-              {renderGreetingSuggestions('text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 leading-snug')}
+              {renderGreetingSuggestions('text-lg sm:text-xl font-extrabold tracking-tight leading-snug')}
             </div>
           </div>
         ) : (
@@ -3474,7 +3426,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
             <div className="w-12 h-12 rounded-2xl bg-blue-50/90 dark:bg-sky-950/70 border border-blue-200/80 dark:border-sky-500/30 flex items-center justify-center text-blue-600 dark:text-sky-400 shadow-md">
               <Bot className="w-6 h-6" />
             </div>
-            {renderGreetingSuggestions('text-lg sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-snug')}
+            {renderGreetingSuggestions('text-2xl sm:text-4xl font-extrabold tracking-tight leading-snug')}
           </div>
 
           <div className="w-full px-2 pt-1">
@@ -3590,7 +3542,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
         </div>
 
         {/* 顶部标题栏与统一对话页展示模式切换/看板筛选导航 */}
-        <div className="relative z-10 px-3 pt-2">
+        <div className="relative z-30 px-3 pt-2">
           <Header
             activeSatelliteCount={satellites.filter((s) => s.status === 'in-bound').length}
             isOrbitForecastOpen={isOrbitForecastOpen}
@@ -3609,53 +3561,42 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
           ref={mainBodyRef}
           className="flex-1 flex flex-row min-h-0 relative z-10 w-full overflow-hidden items-start px-3 pb-3"
         >
-          {/* 左侧主视窗（统一对话页 / 成果管理） */}
+          {/* 左侧主视窗（统一对话页） */}
           <div className={`flex-1 flex flex-col min-h-0 w-full h-full overflow-hidden relative ${isOrbitForecastOpen ? 'mr-3' : ''}`}>
-            {/* 根据核心菜单 Tab 呈现内容 */}
-            {activeTab === 'achievement-management' && (
-              <div className="flex-1 flex flex-col min-h-0 w-full h-full overflow-hidden">
-                <AchievementManagementView 
-                  onBackToPlanning={() => setActiveTab('workspace')}
-                  achievements={achievements}
-                />
-              </div>
-            )}
+            <div ref={workspaceContainerRef} className="flex-1 flex flex-row min-h-0 w-full h-full overflow-hidden">
+              {/* 对话区：对话+看板 / 仅对话 模式下展示 */}
+              {(workspaceViewMode === 'split' || workspaceViewMode === 'chat') && (
+                <div
+                  style={workspaceViewMode === 'split' ? { width: `${workspaceChatPanelWidth}px` } : undefined}
+                  className={`${workspaceViewMode === 'split' ? 'h-full shrink-0 flex flex-col mr-3' : 'flex-1 h-full flex flex-col'} min-h-0 overflow-hidden`}
+                >
+                  {workspaceViewMode === 'split' ? renderCompactChatArea() : renderFullChatArea()}
+                </div>
+              )}
 
-            {activeTab === 'workspace' && (
-              <div ref={workspaceContainerRef} className="flex-1 flex flex-row min-h-0 w-full h-full overflow-hidden">
-                {/* 对话区：对话+看板 / 仅对话 模式下展示 */}
-                {(workspaceViewMode === 'split' || workspaceViewMode === 'chat') && (
-                  <div
-                    style={workspaceViewMode === 'split' ? { width: `${workspaceChatPanelWidth}px` } : undefined}
-                    className={`${workspaceViewMode === 'split' ? 'h-full shrink-0 flex flex-col mr-3' : 'flex-1 h-full flex flex-col'} min-h-0 overflow-hidden`}
-                  >
-                    {workspaceViewMode === 'split' ? renderCompactChatArea() : renderFullChatArea()}
-                  </div>
-                )}
+              {/* 中间可拖拽分割栏（仅“对话+看板”模式下显示） */}
+              {workspaceViewMode === 'split' && (
+                <div
+                  onMouseDown={(e) => { e.preventDefault(); setIsDraggingWorkspaceSplitter(true); }}
+                  onDoubleClick={() => {
+                    if (workspaceContainerRef.current) {
+                      setWorkspaceChatPanelWidth(Math.round(workspaceContainerRef.current.getBoundingClientRect().width * 0.4));
+                    } else {
+                      setWorkspaceChatPanelWidth(460);
+                    }
+                  }}
+                  title="按住左右拖动调整两侧大小，双击恢复默认"
+                  className="group relative -ml-3 w-3 h-full shrink-0 cursor-col-resize flex items-center justify-center select-none z-30"
+                >
+                  <div className={`w-[2px] h-full rounded-full transition-all duration-200 pointer-events-none ${
+                    isDraggingWorkspaceSplitter
+                      ? 'bg-gradient-to-b from-transparent via-blue-500 to-transparent dark:via-sky-400 opacity-100 shadow-[0_0_8px_rgba(59,130,246,0.8)]'
+                      : 'bg-transparent group-hover:bg-gradient-to-b group-hover:from-transparent group-hover:via-blue-500/80 group-hover:to-transparent dark:group-hover:via-sky-400/80 group-hover:shadow-[0_0_6px_rgba(59,130,246,0.4)]'
+                  }`} />
+                </div>
+              )}
 
-                {/* 中间可拖拽分割栏（仅“对话+看板”模式下显示） */}
-                {workspaceViewMode === 'split' && (
-                  <div
-                    onMouseDown={(e) => { e.preventDefault(); setIsDraggingWorkspaceSplitter(true); }}
-                    onDoubleClick={() => {
-                      if (workspaceContainerRef.current) {
-                        setWorkspaceChatPanelWidth(Math.round(workspaceContainerRef.current.getBoundingClientRect().width * 0.4));
-                      } else {
-                        setWorkspaceChatPanelWidth(460);
-                      }
-                    }}
-                    title="按住左右拖动调整两侧大小，双击恢复默认"
-                    className="group relative -ml-3 w-3 h-full shrink-0 cursor-col-resize flex items-center justify-center select-none z-30"
-                  >
-                    <div className={`w-[2px] h-full rounded-full transition-all duration-200 pointer-events-none ${
-                      isDraggingWorkspaceSplitter
-                        ? 'bg-gradient-to-b from-transparent via-blue-500 to-transparent dark:via-sky-400 opacity-100 shadow-[0_0_8px_rgba(59,130,246,0.8)]'
-                        : 'bg-transparent group-hover:bg-gradient-to-b group-hover:from-transparent group-hover:via-blue-500/80 group-hover:to-transparent dark:group-hover:via-sky-400/80 group-hover:shadow-[0_0_6px_rgba(59,130,246,0.4)]'
-                    }`} />
-                  </div>
-                )}
-
-                {/* 看板区：对话+看板 / 仅看板 模式下展示，按右上角筛选导航切换任务管理/健康管理/创新应用看板 */}
+              {/* 看板区：对话+看板 / 仅看板 模式下展示，按右上角筛选导航切换任务管理/健康管理/创新应用看板 */}
                 {(workspaceViewMode === 'split' || workspaceViewMode === 'kanban') && (
                   <div className="flex-1 h-full min-w-[360px] min-h-[480px] overflow-hidden">
                     {workspaceKanbanFilter === 'task' && (
@@ -3710,7 +3651,6 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
                   </div>
                 )}
               </div>
-            )}
           </div>
 
           {/* 中间可拖拽分割栏 (Resizer Divider: 细轴 + 中间到两端渐变透明，鼠标悬浮呈现拖拽指针) */}

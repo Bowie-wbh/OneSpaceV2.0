@@ -1,27 +1,12 @@
 export type ThemeMode = 'dark' | 'light';
 
-export type MainTabType = 'workspace' | 'achievement-management';
+export type MainTabType = 'workspace';
 
 // 统一对话页三种展示模式：对话+看板 | 仅看板 | 仅对话
 export type WorkspaceViewMode = 'split' | 'kanban' | 'chat';
 
 // 统一对话页右上角看板筛选：任务管理看板 | 健康管理看板 | OneEarth太空部分看板
 export type WorkspaceKanbanFilter = 'task' | 'health' | 'innovative';
-
-export interface AchievementItem {
-  id: string;
-  title: string;
-  imagingMode: string; // 成像模式: 多光谱推扫 | 热红外反演 | SAR雷达成像 | 高光谱成像 | 全色高分
-  satelliteName: string; // 卫星名: 云尖沐曦号 | 之江天目01号 | 天巡者03号 | 天工探索二号
-  cameraType: string; // 相机类型: 智能宽幅多光谱相机 | 高分辨率红外热成像仪 | C波段合成孔径雷达 | 高光谱成像仪 | 超高分光学相机
-  captureTime: string; // 拍摄时间: e.g. "2026-09-01 10:24:15"
-  imageUrl: string; // 图像 URL
-  resolution?: string; // 地面分辨率
-  location?: string; // 观测地点
-  fileSize?: string; // 文件大小
-  cloudCoverage?: string; // 云量
-  description?: string; // 成果描述
-}
 
 export interface Satellite {
   id: string;
@@ -162,7 +147,6 @@ export interface ChatMessage {
   activeDayIndex?: number;
   timeSeriesHighRiskLocations?: { name: string; lng: number; lat: number }[];
   showGoToAppButton?: boolean;
-  showGoToAchievementButton?: boolean;
   // 任务发起完成后，引导用户跳转至任务管理看板对应任务详情区
   showGoToTaskButton?: boolean;
   onboardFlowSteps?: FlowStepItem[];

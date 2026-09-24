@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  FolderCheck,
   Search, 
   Sun, 
   Moon, 
@@ -81,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </div>
 
-            {/* 2. 核心菜单区：对话（整合任务规划、健康管理、创新应用）、成果管理 */}
+            {/* 2. 核心菜单区：对话 */}
             <nav className="space-y-1">
               <button
                 id="nav-workspace"
@@ -94,19 +93,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <MessageSquare className="w-4 h-4 flex-shrink-0" />
                 <span>对话</span>
-              </button>
-
-              <button
-                id="nav-achievement-management"
-                onClick={() => onSelectTab('achievement-management')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  activeTab === 'achievement-management'
-                    ? 'bg-blue-50 dark:bg-sky-500/15 text-blue-600 dark:text-sky-400 shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
-                }`}
-              >
-                <FolderCheck className="w-4 h-4 flex-shrink-0" />
-                <span>成果管理</span>
               </button>
             </nav>
 
@@ -240,7 +226,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <ChevronRight className="w-4 h-4" />
             </button>
 
-            {/* 2. 对话 图标（整合任务规划、健康管理、创新应用） */}
+            {/* 2. 对话 图标 */}
             <button
               id="btn-collapsed-workspace"
               onClick={() => onSelectTab('workspace')}
@@ -254,21 +240,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <MessageSquare className="w-4 h-4" />
             </button>
 
-            {/* 5. 成果管理 图标 */}
-            <button
-              id="btn-collapsed-achievement-management"
-              onClick={() => onSelectTab('achievement-management')}
-              title="成果管理"
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                activeTab === 'achievement-management'
-                  ? 'bg-blue-600 text-white dark:bg-sky-400 dark:text-slate-950 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08]'
-              }`}
-            >
-              <FolderCheck className="w-4 h-4" />
-            </button>
-
-            {/* 5. 搜索历史记录 图标 */}
+            {/* 3. 搜索历史记录 图标 */}
             <button
               id="btn-collapsed-search"
               onClick={() => {

@@ -31,12 +31,15 @@ export interface PlannedTaskItem {
   id: string;
   satelliteName: string;
   satelliteCode: string;
-  groundStation: string;
+  groundStation?: string;
   timeRange: string;
+  durationMinutes?: number; // 任务用时（分钟）
   isImaging: boolean;
   imagingTypeDesc?: string;
   computingTask: string;
+  taskSummary?: string; // 任务概要：任务（结果）例如 火点检测（有火点）
   starMode: '单星' | '多星协同';
+  satelliteCount?: number; // 具体卫星数量 1-6
   targetLocation?: string;
   taskMode: '一轨成像' | '常规模式';
   payload: string;
@@ -556,13 +559,16 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     {
       id: 'TASK-SO-HIST-1',
       satelliteName: '云尖沐曦号',
-      satelliteCode: 'SCS-04-15',
+      satelliteCode: 'SCS-04-16',
       groundStation: '一轨即时成像地面站',
       timeRange: '2026-09-04 10:24:05 ~ 10:32:20',
+      durationMinutes: 8,
       isImaging: true,
       imagingTypeDesc: '一轨即时应急成像与火灾检测',
       computingTask: '火灾检测',
+      taskSummary: '火点检测（有火点）',
       starMode: '单星',
+      satelliteCount: 1,
       targetLocation: '之江实验室（120.09°E, 30.29°N）',
       taskMode: '一轨成像',
       payload: '红外',
@@ -573,13 +579,16 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     {
       id: 'TASK-PL-20260904-01',
       satelliteName: '云尖沐曦号',
-      satelliteCode: 'SCS-04-15',
+      satelliteCode: 'SCS-04-16',
       groundStation: '七台河 1201-X/Ka',
       timeRange: '2026-09-04 15:26:51 ~ 15:35:14',
+      durationMinutes: 8,
       isImaging: true,
       imagingTypeDesc: '多光谱对地推扫成像',
       computingTask: '云检测、林火检测',
+      taskSummary: '林火检测（无火点）',
       starMode: '单星',
+      satelliteCount: 1,
       targetLocation: '大兴安岭（124.3°E, 50.2°N）',
       taskMode: '一轨成像',
       payload: '红外',
@@ -588,14 +597,17 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     },
     {
       id: 'TASK-PL-20260904-02',
-      satelliteName: '之江天目01号',
-      satelliteCode: 'ZJ-TM-01',
+      satelliteName: '之江天目01号 等3星',
+      satelliteCode: 'SCS-01-01、SCS-01-02、SCS-01-03',
       groundStation: '喀什 1002-X/S',
       timeRange: '2026-09-04 16:10:20 ~ 16:18:45',
+      durationMinutes: 8,
       isImaging: true,
       imagingTypeDesc: '高分光学热红外同步观测',
       computingTask: '云检测',
+      taskSummary: '云判分析（少云）',
       starMode: '多星协同',
+      satelliteCount: 3,
       targetLocation: '塔里木盆地（82.6°E, 40.5°N）',
       taskMode: '一轨成像',
       payload: '可见光/热红外',
@@ -605,13 +617,16 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     {
       id: 'TASK-PL-20260904-03',
       satelliteName: '天工探索二号',
-      satelliteCode: 'TG-02',
+      satelliteCode: 'SCS-01-06',
       groundStation: '三亚 1105-Ka',
       timeRange: '2026-09-04 17:05:12 ~ 17:14:30',
+      durationMinutes: 9,
       isImaging: true,
       imagingTypeDesc: 'SAR全天候条带成像',
       computingTask: '无',
+      taskSummary: 'SAR成像（成像完成）',
       starMode: '单星',
+      satelliteCount: 1,
       targetLocation: '南海（112.3°E, 15.8°N）',
       taskMode: '一轨成像',
       payload: 'SAR',
@@ -620,14 +635,17 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     },
     {
       id: 'TASK-PL-20260904-04',
-      satelliteName: '天巡者03号',
-      satelliteCode: 'TX-03',
+      satelliteName: '天巡者03号 等4星',
+      satelliteCode: 'SCS-01-04、SCS-01-05、SCS-01-06、SCS-01-07',
       groundStation: '密云 1308-X/Ka',
       timeRange: '2026-09-04 18:22:00 ~ 18:30:15',
+      durationMinutes: 8,
       isImaging: false,
       imagingTypeDesc: '例行在轨遥测健康巡检与星务注数',
       computingTask: '无',
+      taskSummary: '遥测巡检（健康）',
       starMode: '多星协同',
+      satelliteCount: 4,
       targetLocation: '密云（116.8°E, 40.4°N）',
       taskMode: '常规模式',
       payload: '星务遥测',
@@ -636,14 +654,17 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
     },
     {
       id: 'TASK-PL-20260904-05',
-      satelliteName: '云尖沐曦号',
-      satelliteCode: 'SCS-04-15',
+      satelliteName: '云尖沐曦号 等6星',
+      satelliteCode: 'SCS-01-08、SCS-01-09、SCS-01-10、SCS-01-11、SCS-01-12、SCS-04-16',
       groundStation: '佳木斯 1402-X/Ka',
       timeRange: '2026-09-04 20:15:30 ~ 20:23:50',
+      durationMinutes: 8,
       isImaging: true,
       imagingTypeDesc: '长时序夜间微光热成像',
       computingTask: '林火检测',
+      taskSummary: '热点提取（有火点）',
       starMode: '多星协同',
+      satelliteCount: 6,
       targetLocation: '北京（116.4°E, 39.9°N）',
       taskMode: '一轨成像',
       payload: '红外',
@@ -1433,8 +1454,10 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
                   </span>
                 </div>
                 <div className="flex items-baseline gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-[#121829] border border-slate-100 dark:border-white/[0.04]">
-                  <span className="text-slate-400 shrink-0">单星/多星</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{task.starMode}</span>
+                  <span className="text-slate-400 shrink-0">卫星数</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                    {task.satelliteCount ? `${task.satelliteCount}颗` : (task.starMode === '多星协同' ? '3颗' : '1颗')}
+                  </span>
                 </div>
                 <div className="flex items-baseline gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-[#121829] border border-slate-100 dark:border-white/[0.04]">
                   <span className="text-slate-400 shrink-0">拍摄地点</span>
@@ -1557,7 +1580,7 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
         </div>
 
         {/* 2. 总体数据卡（置顶） */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 shrink-0">
           <div className="rounded-xl border border-blue-200/60 dark:border-sky-500/30 bg-gradient-to-br from-blue-50/80 via-white to-sky-50/40 dark:from-[#121829] dark:via-[#161f36] dark:to-[#0f172a] p-3.5 shadow-sm flex flex-col justify-between min-w-0 overflow-hidden">
             <div className="mb-2">
               <span className="text-xs sm:text-sm font-bold text-blue-900/70 dark:text-sky-300/80 truncate">卫星总数</span>
@@ -1565,15 +1588,6 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
             <div className="flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold text-blue-950 dark:text-sky-100 font-mono">{totalSatellites}</span>
               <span className="text-sm font-semibold text-blue-600/70 dark:text-sky-400">个</span>
-            </div>
-          </div>
-          <div className="rounded-xl border border-emerald-200/60 dark:border-emerald-500/30 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/40 dark:from-[#121829] dark:via-[#13221b] dark:to-[#0d1a14] p-3.5 shadow-sm flex flex-col justify-between min-w-0">
-            <div className="mb-2">
-              <span className="text-xs sm:text-sm font-bold text-emerald-900/70 dark:text-emerald-300/80 truncate">已运行</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-950 dark:text-emerald-100 font-mono">{runningDays}</span>
-              <span className="text-sm font-semibold text-emerald-600/70 dark:text-emerald-400">天</span>
             </div>
           </div>
           <div className="rounded-xl border border-amber-200/60 dark:border-amber-500/30 bg-gradient-to-br from-amber-50/80 via-white to-orange-50/40 dark:from-[#121829] dark:via-[#241c14] dark:to-[#18110b] p-3.5 shadow-sm flex flex-col justify-between min-w-0">
@@ -1638,31 +1652,36 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
             <table className="w-full text-left border-collapse text-xs sm:text-sm font-sans">
               <thead className="bg-slate-50/90 dark:bg-[#111728]/90 text-slate-500 dark:text-slate-400 sticky top-0 z-10 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.08]">
                 <tr>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">任务ID</th>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">卫星</th>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">地面站</th>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap w-14">编号</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap w-20">卫星数</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[190px] max-w-[280px]">卫星</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[160px]">任务概要</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap w-28">
                     <button
                       type="button"
                       onClick={toggleTimeSort}
                       className="inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
                     >
-                      <span>时间</span>
+                      <span>任务用时</span>
                       {timeSortOrder === 'default' && <ArrowUpDown size={12} className="opacity-60" />}
                       {timeSortOrder === 'asc' && <ArrowUp size={12} />}
                       {timeSortOrder === 'desc' && <ArrowDown size={12} />}
                     </button>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">单星/多星</th>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">算力卡时</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap w-24">算力卡时</th>
                   <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Token消耗</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
-                {pagedTasks.map((task) => {
+                {pagedTasks.map((task, index) => {
                   const npuDisplay = task.npuHours ?? (task.computingTask && task.computingTask !== '无' ? '0.05h' : '0.00h');
                   const tokenInput = task.tokenUsage?.input ?? (task.computingTask && task.computingTask !== '无' ? '182400tokens' : '0tokens');
                   const tokenOutput = task.tokenUsage?.output ?? (task.computingTask && task.computingTask !== '无' ? '38200tokens' : '0tokens');
+                  const summaryText = task.taskSummary ?? (
+                    task.computingTask && task.computingTask !== '无'
+                      ? `${task.computingTask}（${task.outcome === 'failure' ? '执行失败' : '完成'}）`
+                      : `${task.imagingTypeDesc || '常规观测'}（完成）`
+                  );
 
                   return (
                     <tr
@@ -1676,38 +1695,51 @@ export const TaskManagementKanban: React.FC<TaskManagementKanbanProps> = ({
                       }}
                       className="hover:bg-blue-50/40 dark:hover:bg-sky-950/20 transition-colors group cursor-pointer"
                     >
-                      <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-500 dark:text-slate-400 font-sans">
-                        {task.id}
+                      <td className="py-2.5 px-3 whitespace-nowrap font-medium text-slate-500 dark:text-slate-400 font-sans">
+                        {(taskListPage - 1) * taskListPageSize + index + 1}
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <div>
-                          <div className="font-bold text-slate-800 dark:text-slate-100 font-sans">{task.satelliteName}</div>
-                          <div className="text-[11px] text-slate-400 font-sans">{task.satelliteCode}</div>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        {(() => {
+                          const count = task.satelliteCount ?? (task.starMode === '多星协同' ? 3 : 1);
+                          return (
+                            <span className={`px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-semibold border font-sans ${count > 1 ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-500/30' : 'bg-blue-50 dark:bg-sky-500/15 text-blue-700 dark:text-sky-300 border-blue-200/60 dark:border-sky-500/30'}`}>
+                              {count}颗
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex flex-wrap items-center gap-1.5 max-w-[280px]">
+                          {task.satelliteCode.split('、').map((code, cIdx) => (
+                            <span 
+                              key={cIdx} 
+                              className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.06] text-slate-800 dark:text-slate-200 font-mono text-[11px] sm:text-xs font-semibold border border-slate-200/80 dark:border-white/[0.08] shadow-2xs"
+                            >
+                              {code}
+                            </span>
+                          ))}
                         </div>
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300 font-sans">
-                        <div className="font-bold text-slate-800 dark:text-slate-100">{task.groundStation.split(' ')[0]}</div>
-                        <div className="text-[11px] text-slate-400">{task.groundStation.split(' ').slice(1).join(' ')}</div>
-                      </td>
-                      <td className="py-3 px-3 whitespace-nowrap font-sans font-medium text-slate-700 dark:text-slate-300">
-                        <div className="font-bold text-slate-800 dark:text-slate-100">{task.timeRange.split(' ')[0]}</div>
-                        <div className="text-[11px] text-slate-400">{task.timeRange.split(' ').slice(1).join(' ')}</div>
-                      </td>
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border font-sans ${task.starMode === '多星协同' ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-500/30' : 'bg-blue-50 dark:bg-sky-500/15 text-blue-700 dark:text-sky-300 border-blue-200/60 dark:border-sky-500/30'}`}>
-                          {task.starMode === '多星协同' ? '多星' : task.starMode}
+                      <td className="py-2.5 px-3 whitespace-nowrap font-sans">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">
+                          {summaryText}
                         </span>
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap font-sans font-medium text-slate-700 dark:text-slate-300">
+                      <td className="py-2.5 px-3 whitespace-nowrap font-sans font-medium text-slate-700 dark:text-slate-300">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 font-sans text-xs sm:text-sm">
+                          {task.durationMinutes ? `${task.durationMinutes}分钟` : '8分钟'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 whitespace-nowrap font-sans font-medium text-slate-700 dark:text-slate-300">
                         {npuDisplay}
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap font-sans text-xs">
+                      <td className="py-3 px-3 whitespace-nowrap font-sans">
                         <div className="space-y-0.5 font-mono">
-                          <div className="text-slate-600 dark:text-slate-300 text-[11px]">
+                          <div className="text-slate-600 dark:text-slate-300">
                             <span className="text-slate-400 font-sans">输入：</span>
                             <span className="font-semibold text-slate-700 dark:text-slate-200">{tokenInput}</span>
                           </div>
-                          <div className="text-slate-600 dark:text-slate-300 text-[11px]">
+                          <div className="text-slate-600 dark:text-slate-300">
                             <span className="text-slate-400 font-sans">输出：</span>
                             <span className="font-semibold text-slate-700 dark:text-slate-200">{tokenOutput}</span>
                           </div>
