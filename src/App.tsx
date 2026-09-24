@@ -3397,7 +3397,7 @@ ClickHouse 同窗核心遥测总体判读：健康评分 **65.5 / 100**，原始
   // 打招呼与推荐问题（对话+看板 / 仅对话 两种模式共用）
   const renderGreetingSuggestions = (titleClassName: string) => (
     <div className="space-y-2">
-      <h2 className={titleClassName}>请问有什么可以帮到您？</h2>
+      <h2 className={titleClassName}>三体计算星座任务调度</h2>
       <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
         {WORKSPACE_SUGGESTED_PROMPTS.map((p) => (
           <button
