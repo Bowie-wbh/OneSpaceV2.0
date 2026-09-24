@@ -1555,6 +1555,7 @@ function MonitorCard({
                     label: '执行任务',
                     value: completedTasks,
                     unit: '次',
+                    formatter: undefined as ((n: number) => string) | undefined,
                     dot: 'bg-rose-400 shadow-[0_0_6px_#f43f5e]',
                     valColor: 'text-slate-100',
                     bgGradient: 'bg-gradient-to-b from-rose-500/18 via-rose-950/20 to-transparent border-rose-500/30'
@@ -1563,6 +1564,7 @@ function MonitorCard({
                     label: '发现火点',
                     value: firePoints,
                     unit: '处',
+                    formatter: undefined as ((n: number) => string) | undefined,
                     dot: 'bg-rose-400 shadow-[0_0_6px_#f43f5e]',
                     valColor: 'text-slate-100',
                     bgGradient: 'bg-gradient-to-b from-rose-500/18 via-rose-950/20 to-transparent border-rose-500/30'
